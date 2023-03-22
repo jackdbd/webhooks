@@ -1,0 +1,21 @@
+// https://emojipedia.org/
+export enum Emoji {
+  Coin = "🪙",
+  CreditCard = "💳",
+  Customer = "👤",
+  DollarBanknote = "💵",
+  Error = "🚨",
+  Failure = "❌",
+  Hook = "🪝",
+  Inspect = "🔍",
+  Invalid = "❌",
+  MoneyBag = "💰",
+  Notification = "💬",
+  ShoppingBags = "🛍️",
+  Ok = "✅",
+  Sparkles = "✨",
+  Success = "✅",
+  Timer = "⏱️",
+  User = "👤",
+  Warning = "⚠️",
+}

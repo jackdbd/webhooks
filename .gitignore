@@ -2,6 +2,7 @@
 node_modules/
 
 # environment variables
+.dev.vars
 .envrc
 
 # secrets
