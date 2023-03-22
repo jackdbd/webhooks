@@ -13,6 +13,7 @@
     "deploy": "wrangler pages publish ./pages",
     "dev": "run-p forward-stripe-webhook-events pages:dev",
     "forward-stripe-webhook-events": "stripe listen --events customer.created,customer.deleted,payment_intent.succeeded,price.created,product.created --api-key=$STRIPE_API_KEY_TEST --forward-to localhost:8788/stripe --log-level info --device-name 'ThinkPad L380'",
+    "logs": "wrangler pages deployment tail --project-name webhooks",
     "nuke": "rm -rf node_modules package-lock.json",
     "make-dev-vars": "node scripts/make-dev-vars.mjs",
     "pages:dev": "wrangler pages dev ./pages --local --compatibility-date=2023-03-22",
