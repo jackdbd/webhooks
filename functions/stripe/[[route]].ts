@@ -1,5 +1,4 @@
 import { Hono, Context } from "hono";
-import type { MiddlewareHandler } from "hono";
 import { z } from "zod";
 import Stripe from "stripe";
 import { zValidator } from "@hono/zod-validator";
@@ -7,141 +6,20 @@ import { handle } from "hono/cloudflare-pages";
 import { logger } from "hono/logger";
 import { prettyJSON } from "hono/pretty-json";
 import type { AppEventContext } from "../_middleware.js";
-import { Emoji } from "../_utils.js";
-
-interface StripeMiddlewareConfig {
-  api_key?: string;
-  stripe_config: Stripe.StripeConfig;
-  webhook_secret?: string;
-}
-
-export type ValidateWebhookEvent = (
-  ctx: Context
-) => Promise<
-  | { error: Error; value?: undefined }
-  | { error?: undefined; value: Stripe.Event }
->;
-
-export const stripeWebhooks = ({
-  api_key,
-  stripe_config,
-  webhook_secret,
-}: StripeMiddlewareConfig): MiddlewareHandler => {
-  let client: Stripe;
-  let stripe_api_key: string;
-  let secret: string;
-
-  return async (ctx, next) => {
-    if (!client) {
-      if (api_key) {
-        stripe_api_key = api_key;
-      } else {
-        if (ctx.env.STRIPE_API_KEY) {
-          stripe_api_key = ctx.env.STRIPE_API_KEY;
-        } else {
-          const arr = [
-            `Environment variable STRIPE_API_KEY is not defined in this EventContext.`,
-            `Be sure to set it in your .dev.vars file and in your Cloudflare project.`,
-          ];
-          throw new Error(arr.join(" "));
-        }
-      }
-
-      client = new Stripe(stripe_api_key, stripe_config);
-    }
-
-    if (webhook_secret) {
-      secret = webhook_secret;
-    } else {
-      if (ctx.env.STRIPE_WEBHOOK_SECRET) {
-        secret = ctx.env.STRIPE_WEBHOOK_SECRET;
-      } else {
-        const arr = [
-          `Environment variable STRIPE_WEBHOOK_SECRET is not defined in this EventContext.`,
-          `Be sure to set it in your .dev.vars file and in your Cloudflare project.`,
-        ];
-        throw new Error(arr.join(" "));
-      }
-    }
-
-    // READ THIS!
-    // https://community.cloudflare.com/t/wrangler-with-stripe-error/447825/2
-    // https://jross.me/verifying-stripe-webhook-signatures-cloudflare-workers/
-
-    const validateWebhookEvent: ValidateWebhookEvent = async (ctx) => {
-      const stripe_signature = ctx.req.headers.get("stripe-signature");
-
-      if (!stripe_signature) {
-        const message = `request lacks required header: stripe-signature`;
-
-        console.log({
-          message,
-          required_header: "stripe-signature",
-          headers: ctx.req.headers,
-        });
-
-        // this is a client error, not an application error. We log it and return
-        // 400 bad request without telling anything more to the client. We do NOT
-        // want to tell the client that we require the 'stripe-signature' header.
-
-        return { error: new Error(message) };
-      }
-
-      let raw_req_body: string;
-      try {
-        raw_req_body = await ctx.req.text();
-      } catch (err: any) {
-        const message = `could not read raw request body`;
-
-        console.log({
-          message,
-          original_error_message: err.message,
-        });
-
-        return { error: new Error(message) };
-      }
-
-      // I thought I had to provide a custom implementation for cryptoProvider,
-      // because I am getting this error:
-      // SubtleCryptoProvider cannot be used in a synchronous context
-      // https://github.com/stripe/stripe-node/issues/997
-      // https://stackoverflow.com/questions/57626477/using-javascript-crypto-subtle-in-synchronous-function
-      // Turns out I can simply call stripe.webhooks.constructEventAsync instead
-      // of webhooks.constructEvent.
-
-      try {
-        const event = await client.webhooks.constructEventAsync(
-          raw_req_body,
-          stripe_signature,
-          secret
-        );
-        return { value: event };
-      } catch (err: any) {
-        const message = `could not construct webhook event`;
-
-        console.log({
-          message,
-          original_error_message: err.message,
-        });
-
-        return { error: new Error(message) };
-      }
-    };
-
-    (ctx.req as any).validateWebhookEvent = validateWebhookEvent;
-
-    await next();
-  };
-};
+import {
+  anchor,
+  Emoji,
+  eventIsIgnoredMessage,
+  incorrectRequestBody,
+} from "../_utils.js";
+import { stripeWebhooks } from "../_hono_middlewares.js";
+import type { ValidateWebhookEvent } from "../_hono_middlewares.js";
 
 interface TextDetailsConfig {
   event: Stripe.Event;
   resource_type: string;
   resource_id: string;
 }
-
-export const anchor = (link: { href: string; text: string }) =>
-  `<a href="${link.href}">${link.text}</a>`;
 
 const textDetails = ({
   event,
@@ -161,28 +39,6 @@ const textDetails = ({
   ];
 };
 
-// https://emojipedia.org/
-// enum Emoji {
-//   Coin = "🪙",
-//   CreditCard = "💳",
-//   Customer = "👤",
-//   DollarBanknote = "💵",
-//   Error = "🚨",
-//   Failure = "❌",
-//   Hook = "🪝",
-//   Inspect = "🔍",
-//   Invalid = "❌",
-//   MoneyBag = "💰",
-//   Notification = "💬",
-//   ShoppingBags = "🛍️",
-//   Ok = "✅",
-//   Sparkles = "✨",
-//   Success = "✅",
-//   Timer = "⏱️",
-//   User = "👤",
-//   Warning = "⚠️",
-// }
-
 const app = new Hono();
 
 const stripe_config: Stripe.StripeConfig = {
@@ -195,7 +51,13 @@ const stripe_config: Stripe.StripeConfig = {
 // https://github.com/honojs/hono/tree/main/src/middleware
 app.use("*", logger());
 app.use("*", prettyJSON());
-app.use("*", stripeWebhooks({ stripe_config }));
+app.use(
+  "*",
+  stripeWebhooks({
+    stripe_config,
+    webhook_endpoint: "https://webhooks.giacomodebidda.com/stripe",
+  })
+);
 
 app.notFound((ctx) => ctx.json({ message: "Not Found", ok: false }, 404));
 
@@ -222,9 +84,14 @@ const schema = z.object({
 // https://developers.cloudflare.com/pages/platform/functions/routing/
 // https://developers.cloudflare.com/pages/platform/functions/api-reference/
 
-app.get("/", (ctx) => {
+app.get("/", async (ctx) => {
+  const webhook_endpoint = (ctx.req as any).stripe_webhook_endpoint as string;
+  const fn = (ctx.req as any).enabledWebhookEvents as any;
+  const enabled_events: string[] = await fn(webhook_endpoint);
+
   return ctx.json({
-    message: "Hello, Stripe! GET",
+    enabled_events,
+    message: `This Stripe account is configured to POST ${enabled_events.length} webhook event/s to ${webhook_endpoint}`,
   });
 });
 
@@ -258,8 +125,6 @@ app.post("/", zValidator("json", schema), async (ctx) => {
     event = validated;
   }
 
-  // event = (ctx.req as any).stripe_webhook_event;
-
   // TODO: maybe keep these in a middleware
   const host = ctx.req.headers.get("host");
   const user_agent = ctx.req.headers.get("user-agent");
@@ -268,6 +133,16 @@ app.post("/", zValidator("json", schema), async (ctx) => {
   console.log({ host, user_agent, real_ip, forwarded_for });
 
   const telegram = (ctx.env.eventContext as AppEventContext).data.telegram;
+
+  const webhook_endpoint = (ctx.req as any).stripe_webhook_endpoint as string;
+  const eventsForEndpoint = (ctx.req as any).enabledWebhookEvents as any;
+  const enabled_events: string[] = await eventsForEndpoint(webhook_endpoint);
+
+  if (!enabled_events.includes(event.type)) {
+    const message = eventIsIgnoredMessage(event.type, webhook_endpoint);
+    // await telegram.sendMessage(message);
+    return ctx.json({ message: `Bad Request: ${message}` }, 400);
+  }
 
   let text = "";
   switch (event.type) {
@@ -323,11 +198,18 @@ app.post("/", zValidator("json", schema), async (ctx) => {
     default: {
       const event_type = validated.type;
       console.log("=== DEFAULT CASE event_type ===", event_type);
+
+      const message = event_type
+        ? `event '${event_type}' not handled (this Stripe account can POST it, but there isn't a handler in this application)`
+        : incorrectRequestBody;
+
+      console.log(message);
+
       text = [
         `${Emoji.Warning} ${Emoji.Hook} <b>Stripe webhook event not processed by this app</b> <code>${event.type}</code> (${host})`,
+        message,
         `<pre><code>${JSON.stringify(event, null, 2)}</code></pre>`,
       ].join("\n\n");
-      // return ctx.json({ message: "Bad Request" }, 400);
     }
   }
 
