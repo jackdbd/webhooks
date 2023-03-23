@@ -78,4 +78,5 @@ app.post("/", zValidator("json", schema), async (ctx) => {
   }
 });
 
-export const onRequest = handle(app, "/monitoring");
+// export const onRequest = handle(app, "/monitoring");
+export const onRequestPost = handle(app, "/monitoring");

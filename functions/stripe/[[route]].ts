@@ -5,7 +5,7 @@ import { zValidator } from "@hono/zod-validator";
 import { handle } from "hono/cloudflare-pages";
 import { logger } from "hono/logger";
 import { prettyJSON } from "hono/pretty-json";
-import type { AppEventContext } from "../_middleware.js";
+import type { AppEventContext, PluginData } from "../_middleware.js";
 import {
   anchor,
   Emoji,
@@ -88,6 +88,11 @@ app.get("/", async (ctx) => {
   const webhook_endpoint = (ctx.req as any).stripe_webhook_endpoint as string;
   const fn = (ctx.req as any).enabledWebhookEvents as any;
   const enabled_events: string[] = await fn(webhook_endpoint);
+
+  const telegram = (ctx.env!.eventContext as AppEventContext).data.telegram;
+  await telegram.sendMessage(`<b>Testing</b> <code>/stripe GET</code>`);
+  // const data = (ctx.env as any).eventContext.data as PluginData;
+  // await data.telegram.sendMessage(`<b>Testing</b> <code>/stripe GET</code>`);
 
   return ctx.json({
     enabled_events,
