@@ -10,7 +10,13 @@ npm install
 
 ## Development
 
-When developing handlers for [Stripe webhooks]([Stripe webhook](https://stripe.com/docs/webhooks)), you will need 2 terminals open to develop this application. In all other cases you will need 3 terminals open.
+When developing an app for Cloudflare Workers or Cloudflare Pages using `wrangler dev`, you can set environment variables and secrets in a `.dev.vars` file. This file must be kept in the root directory of your project. Given that some secrets might be JSON strings, I like to keep them the [secrets](./secrets/README.md) directory. Then I generate the `.dev.vars` file using this script:
+
+```sh
+node scripts/make-dev-vars.mjs
+```
+
+When developing handlers for [Stripe webhooks](https://stripe.com/docs/webhooks), you will need 2 terminals open to develop this application. In all other cases you will need 3 terminals open.
 
 ### Stripe
 

@@ -34,3 +34,4 @@ txt_filepaths.forEach((fp) => {
 const outpath = path.join(process.cwd(), ".dev.vars");
 
 fs.writeFileSync(outpath, strings.join("\n"), "utf8");
+console.log(`✅ ${outpath} generated`);
