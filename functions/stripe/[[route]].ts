@@ -1,19 +1,19 @@
-import { Hono, Context } from "hono";
-import { z } from "zod";
+import { Hono } from "hono";
 import Stripe from "stripe";
 import { zValidator } from "@hono/zod-validator";
 import { handle } from "hono/cloudflare-pages";
 import { logger } from "hono/logger";
 import { prettyJSON } from "hono/pretty-json";
-import type { AppEventContext, PluginData } from "../_middleware.js";
+import { head, body, anchor } from "../_html.js";
+import type { AppEventContext } from "../_middleware.js";
 import {
-  anchor,
   Emoji,
   eventIsIgnoredMessage,
   incorrectRequestBody,
 } from "../_utils.js";
 import { stripeWebhooks } from "../_hono_middlewares.js";
 import type { ValidateWebhookEvent } from "../_hono_middlewares.js";
+import { post_request_body } from "./_schemas.js";
 
 interface TextDetailsConfig {
   event: Stripe.Event;
@@ -61,26 +61,6 @@ app.use(
 
 app.notFound((ctx) => ctx.json({ message: "Not Found", ok: false }, 404));
 
-const schema = z.object({
-  id: z.string().nonempty(),
-  object: z.enum(["event"]),
-  api_version: z.string().nonempty(),
-  created: z.number(),
-  data: z.object({
-    object: z.object({
-      id: z.string().nonempty(),
-      object: z.string().nonempty(),
-    }),
-  }),
-  livemode: z.boolean(),
-  pending_webhooks: z.number(),
-  request: z.object({
-    id: z.string().nonempty(),
-    idempotency_key: z.string().nonempty(),
-  }),
-  type: z.string().nonempty(),
-});
-
 // https://developers.cloudflare.com/pages/platform/functions/routing/
 // https://developers.cloudflare.com/pages/platform/functions/api-reference/
 
@@ -89,18 +69,26 @@ app.get("/", async (ctx) => {
   const fn = (ctx.req as any).enabledWebhookEvents as any;
   const enabled_events: string[] = await fn(webhook_endpoint);
 
-  const telegram = (ctx.env!.eventContext as AppEventContext).data.telegram;
-  await telegram.sendMessage(`<b>Testing</b> <code>/stripe GET</code>`);
-  // const data = (ctx.env as any).eventContext.data as PluginData;
-  // await data.telegram.sendMessage(`<b>Testing</b> <code>/stripe GET</code>`);
+  const html = `
+<!DOCTYPE html>
+<html lang="en">
+  ${head()}
+  ${body({
+    title: `Stripe webhooks`,
+    instructions: `<p>This Stripe account is configured to POST ${
+      enabled_events.length
+    } webhook event/s to ${anchor({
+      href: webhook_endpoint,
+      text: webhook_endpoint,
+    })}</p>`,
+    successes: enabled_events,
+  })}
+</html>`;
 
-  return ctx.json({
-    enabled_events,
-    message: `This Stripe account is configured to POST ${enabled_events.length} webhook event/s to ${webhook_endpoint}`,
-  });
+  return ctx.html(html);
 });
 
-app.post("/", zValidator("json", schema), async (ctx) => {
+app.post("/", zValidator("json", post_request_body), async (ctx) => {
   if (!ctx.env) {
     throw new Error(`ctx.env is not defined`);
   }
@@ -145,7 +133,6 @@ app.post("/", zValidator("json", schema), async (ctx) => {
 
   if (!enabled_events.includes(event.type)) {
     const message = eventIsIgnoredMessage(event.type, webhook_endpoint);
-    // await telegram.sendMessage(message);
     return ctx.json({ message: `Bad Request: ${message}` }, 400);
   }
 
@@ -236,3 +223,5 @@ app.post("/", zValidator("json", schema), async (ctx) => {
 });
 
 export const onRequest = handle(app, "/stripe");
+// Note: basePath seems not to work well with Hono.
+// app.basePath("/stripe");

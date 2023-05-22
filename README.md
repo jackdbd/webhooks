@@ -1,6 +1,6 @@
 # webhooks
 
-Application that I use to process webhook events fired by several services: [Cloud Monitoring](https://cloud.google.com/monitoring/support/notification-options#webhooks), [npm.js](https://docs.npmjs.com/cli/v7/commands/npm-hook), [Stripe](https://stripe.com/docs/webhooks), etc.
+Application that I use to process webhook events fired by several services: [Cloud Monitoring](https://cloud.google.com/monitoring/support/notification-options#webhooks), [npm.js](https://docs.npmjs.com/cli/v7/commands/npm-hook), [Stripe](https://stripe.com/docs/webhooks), etc. All webhooks are hosted as a single application on Cloudflare Pages. Some routes are handled by the [Cloudflare Pages Functions routing](https://developers.cloudflare.com/pages/platform/functions/routing/). Some others are handled by [Hono](https://hono.dev/).
 
 ## Installation
 
@@ -10,15 +10,19 @@ npm install
 
 ## Development
 
-When developing an app for Cloudflare Workers or Cloudflare Pages using `wrangler dev`, you can set environment variables and secrets in a `.dev.vars` file. This file must be kept in the root directory of your project. Given that some secrets might be JSON strings, I like to keep them the [secrets](./secrets/README.md) directory. Then I generate the `.dev.vars` file using this script:
+When developing an app for Cloudflare Workers or Cloudflare Pages with `wrangler dev`, you can set environment variables and secrets in a `.dev.vars` file. This file must be kept in the root directory of your project. Given that some secrets might be JSON strings, I like to keep them the [secrets](./secrets/README.md) directory. Then I generate the `.dev.vars` file using this script:
 
 ```sh
 node scripts/make-dev-vars.mjs
+# in alternative, run this npm script:
+npm run make-dev-vars
 ```
 
-When developing handlers for [Stripe webhooks](https://stripe.com/docs/webhooks), you will need 2 terminals open to develop this application. In all other cases you will need 3 terminals open.
+When developing handlers for [Stripe webhooks](https://stripe.com/docs/webhooks), you will need 2 terminals open to develop this application. In all other cases you will need 3 terminals open. I use [Tmux](https://github.com/tmux/tmux/wiki) for this.
 
-### Stripe
+The main web page will be available at: http://localhost:8788/
+
+### Stripe webhooks
 
 In the **first terminal**, run this command, which watches all files using [wrangler](https://github.com/cloudflare/workers-sdk) and forwards all Stripe webhook events to `localhost:8788` using the [Stripe CLI](https://github.com/stripe/stripe-cli):
 
@@ -35,7 +39,7 @@ stripe trigger --api-key $STRIPE_API_KEY_TEST price.created
 stripe trigger --api-key $STRIPE_API_KEY_TEST product.created
 ```
 
-### Everything else
+### All other webhooks
 
 In the **first terminal**, run this command:
 
@@ -59,9 +63,9 @@ Now copy the public, **Forwarding URL** that ngrok gave you, and assign it to th
 > - visit http://localhost:4040/status to know the public URL ngrok assigned you.
 > - visit http://localhost:4040/inspect/http to inspect/replay past requests that were tunneled by ngrok.
 
-In the **third terminal**, make some POST requests representing webhook events. See a few examples below.
+In the **third terminal**, make some POST requests simulating webhook events sent by a third-party service. See a few examples below.
 
-#### Cloud Monitoring
+#### Cloud Monitoring webhooks
 
 POST request made by [Cloud Monitoring](https://cloud.google.com/monitoring/support/notification-options#webhooks):
 
@@ -72,7 +76,7 @@ curl "$WEBHOOKS_URL/monitoring" \
   -d "@./assets/webhook-events/cloud-monitoring/incident-created.json"
 ```
 
-#### npm.js
+#### npm.js webhooks
 
 POST request made by a [npm hook](https://docs.npmjs.com/cli/v9/commands/npm-hook):
 
@@ -81,4 +85,22 @@ curl "$WEBHOOKS_URL/npm" \
   -X POST \
   -H "Content-Type: application/json" \
   -d "@./assets/webhook-events/npm/package-changed.json"
+```
+
+#### WebPageTest pingbacks
+
+GET request made by a [WebPageTest pingback](https://docs.webpagetest.org/integrations/):
+
+```sh
+curl "$WEBHOOKS_URL/webpagetest?id=some-webpagetest-test-id" \
+  -X GET
+```
+
+## Deploy
+
+todo
+```sh
+wrangler pages publish ./pages
+# in alternative, run this npm script:
+npm run deploy
 ```

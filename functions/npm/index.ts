@@ -1,40 +1,24 @@
-import { z } from "zod";
+import type { Env } from "../_environment.js";
 import type { Client } from "../_telegram_client.js";
+import { head, body } from "../_html.js";
 import { Emoji } from "../_utils.js";
+import { post_request_body } from "./_schemas.js";
+import type { NpmWebhookEvent } from "./_schemas.js";
 
-interface Env {
-  STRIPE_API_KEY?: string;
-  STRIPE_WEBHOOK_SECRET?: string;
-  TELEGRAM_CHAT_ID?: string;
-}
-
-export const onRequest: PagesFunction<Env> = (ctx) => {
-  const css = `
-  .inline-code {
-    background-color:lightgray;
-    display: inline;
-    font-family: monospace;
-    padding: 0.15em;
-  }
-  `;
-
+export const onRequestGet: PagesFunction<Env> = (_ctx) => {
   const title = `How to list your npm hooks`;
+
+  const instructions = `
+  <p>You can use this command to list all of your npm hooks:</p>
+  <pre><code>npm hook ls</code></pre>
+  <p>See the <a href="https://docs.npmjs.com/cli/v9/commands/npm-hook" rel="noopener noreferrer" target="_blank">documentation on npm.js</a><p>
+`;
 
   const html = `
 <!DOCTYPE html>
 <html lang="en">
-  <head>
-    <meta charset="utf-8" />
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/water.css@2/out/water.css">
-    <style>${css}</style>
-  </head>
-  <body>
-    <h1>${title}</h1>
-    <p>You can use this command to list all of your npm hooks:<p>
-    <pre><code>npm hook ls</code></pre>
-    <p>See the <a href="https://docs.npmjs.com/cli/v9/commands/npm-hook" rel="noopener noreferrer" target="_blank">documentation on npm.js</a><p>
-    <p>Back to <a href="/">home</a>.<p>
-  </body>
+  ${head()}
+  ${body({ title, instructions })}
 </html>`;
 
   return new Response(html, {
@@ -43,26 +27,6 @@ export const onRequest: PagesFunction<Env> = (ctx) => {
     },
   });
 };
-
-const schema = z.object({
-  event: z.enum(["package:change"]),
-  name: z.string().nonempty(),
-  type: z.enum(["package"]),
-  version: z.string().nonempty(),
-  hookOwner: z.object({
-    username: z.string().nonempty(),
-  }),
-  payload: z.object({
-    author: z.any(),
-    description: z.string(),
-    "dist-tags": z.any(),
-    keywords: z.array(z.string()),
-  }),
-  change: z.any(),
-  time: z.number(),
-});
-
-type NpmWebhookEvent = z.infer<typeof schema>;
 
 // TODO: I could develop a Cloudflare Pages plugin to validate the webhook event
 // fired by npm.js and make the validated event available in `context.data`
@@ -81,7 +45,7 @@ export const onRequestPost: PagesFunction<
 > = async (ctx) => {
   const body = await ctx.request.json();
 
-  const result = schema.safeParse(body);
+  const result = post_request_body.safeParse(body);
 
   if (!result.success) {
     const err = result.error;

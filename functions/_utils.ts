@@ -5,9 +5,6 @@ export interface EnabledEventsForWebhookEndpoint {
   url: string;
 }
 
-export const anchor = (link: { href: string; text: string }) =>
-  `<a href="${link.href}">${link.text}</a>`;
-
 // https://emojipedia.org/
 export enum Emoji {
   ChartDecreasing = "📉",

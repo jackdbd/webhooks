@@ -1,13 +1,8 @@
 // https://developers.cloudflare.com/pages/platform/functions/middleware/
+import type { Env } from "./_environment.js";
 import type { EventContext } from "@cloudflare/workers-types";
 import { ChatId, makeSendTelegramMessage } from "./_telegram_client.js";
 import type { Credentials, Client } from "./_telegram_client.js";
-
-export interface Env {
-  TELEGRAM?: string;
-  TELEGRAM_CHAT_ID?: string;
-  TELEGRAM_TOKEN?: string;
-}
 
 export interface Data {
   telegram: Client;

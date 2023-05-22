@@ -1,5 +1,4 @@
 import { Hono } from "hono";
-import { z } from "zod";
 import { zValidator } from "@hono/zod-validator";
 import { operationListText } from "@jackdbd/telegram-text-messages";
 import { handle } from "hono/cloudflare-pages";
@@ -7,24 +6,15 @@ import { logger } from "hono/logger";
 import { prettyJSON } from "hono/pretty-json";
 import type { AppEventContext } from "../_middleware.js";
 import { Emoji } from "../_utils.js";
+import { post_request_body } from "./_schemas.js";
 
 const app = new Hono();
+app.basePath("/monitoring");
 app.use("*", logger());
 app.use("*", prettyJSON());
 app.notFound((ctx) => ctx.json({ message: "Not Found", ok: false }, 404));
 
-const schema = z.object({
-  // incident contains many more fields, but I only care about these ones for now
-  incident: z.object({
-    condition_name: z.string().nonempty(),
-    policy_name: z.string().nonempty(),
-    summary: z.string().nonempty(),
-    url: z.string().nonempty(),
-  }),
-  version: z.string().nonempty(),
-});
-
-app.post("/", zValidator("json", schema), async (ctx) => {
+app.post("/", zValidator("json", post_request_body), async (ctx) => {
   if (!ctx.env) {
     throw new Error(`ctx.env is not defined`);
   }
@@ -78,5 +68,4 @@ app.post("/", zValidator("json", schema), async (ctx) => {
   }
 });
 
-// export const onRequest = handle(app, "/monitoring");
-export const onRequestPost = handle(app, "/monitoring");
+export const onRequestPost = handle(app);
