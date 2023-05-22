@@ -16,7 +16,7 @@
     "logs": "wrangler pages deployment tail --project-name webhooks",
     "nuke": "rm -rf node_modules package-lock.json",
     "make-dev-vars": "node scripts/make-dev-vars.mjs",
-    "pages:dev": "wrangler pages dev ./pages --local --live-reload --compatibility-date=2023-05-18",
+    "pages:dev": "wrangler pages dev ./pages --local --live-reload --port 8788 --compatibility-date=2023-05-18",
     "stripe:webook-secret": "stripe listen --api-key $STRIPE_API_KEY_TEST --print-secret",
     "tunnel": "ngrok http 8788"
   },

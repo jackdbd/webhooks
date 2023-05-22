@@ -4,15 +4,16 @@ import { zValidator } from "@hono/zod-validator";
 import { handle } from "hono/cloudflare-pages";
 import { logger } from "hono/logger";
 import { prettyJSON } from "hono/pretty-json";
-import { head, body, anchor, notFoundPage, errorPage } from "../_html.js";
+import { head, body, anchor } from "../_html.js";
 import type { AppEventContext } from "../_environment.js";
 import {
   Emoji,
   eventIsIgnoredMessage,
   incorrectRequestBody,
 } from "../_utils.js";
-import { stripeWebhooks } from "../_hono_middlewares.js";
-import type { ValidateWebhookEvent } from "../_hono_middlewares.js";
+import { notFound, onError } from "../_hono-handlers.js";
+import { stripeWebhooks } from "../_hono-middlewares.js";
+import type { ValidateWebhookEvent } from "../_hono-middlewares.js";
 import { post_request_body } from "./_schemas.js";
 
 interface TextDetailsConfig {
@@ -59,16 +60,8 @@ app.use(
   })
 );
 
-app.notFound((ctx) => {
-  // throw new Error(`this is a test to check the error page`);
-  return ctx.html(notFoundPage(ctx.req.path), 404);
-});
-
-// https://hono.dev/api/hono#error-handling
-app.onError((err, ctx) => {
-  console.error(`${err}`);
-  return ctx.html(errorPage(), 500);
-});
+app.notFound(notFound);
+app.onError(onError);
 
 app.get("/", async (ctx) => {
   const webhook_endpoint = (ctx.req as any).stripe_webhook_endpoint as string;

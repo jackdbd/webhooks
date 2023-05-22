@@ -56,6 +56,8 @@ const defaultOrProvided = (default_value: boolean, b?: boolean) => {
   }
 };
 
+let telegram: Client | undefined = undefined;
+
 export const telegramPlugin = <E extends TelegramPluginEnv = TelegramPluginEnv>(
   pluginArgs?: PluginArgs
 ) => {
@@ -66,6 +68,12 @@ export const telegramPlugin = <E extends TelegramPluginEnv = TelegramPluginEnv>(
   return function telegramPluginInner(
     ctx: EventContext<E, any, Record<string, Client>>
   ) {
+    if (telegram) {
+      ctx.data.telegram = telegram;
+      return ctx.next();
+    }
+
+    console.log("initialize Telegram client");
     if (ctx.env && ctx.env.TELEGRAM) {
       const creds = JSON.parse(ctx.env.TELEGRAM) as Credentials;
       if (creds.chat_id) {
@@ -84,8 +92,9 @@ export const telegramPlugin = <E extends TelegramPluginEnv = TelegramPluginEnv>(
       throw new Error(`Telegram token not set`);
     }
 
-    // make the telegram client available to middlewares and handlers
-    ctx.data.telegram = {
+    // store the Telegram client in a global variable, so we don't reinitialize
+    // it on every request
+    telegram = {
       sendMessage: makeSendTelegramMessage({
         chat_id,
         token,
@@ -99,6 +108,9 @@ export const telegramPlugin = <E extends TelegramPluginEnv = TelegramPluginEnv>(
         ),
       }),
     };
+
+    // make the telegram client available to middlewares and handlers
+    ctx.data.telegram = telegram;
 
     return ctx.next();
   };
