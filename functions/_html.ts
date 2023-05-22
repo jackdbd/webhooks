@@ -52,3 +52,25 @@ export const body = ({
 
 export const anchor = ({ href, text }: { href: string; text: string }) =>
   `<a href="${href}" rel="noopener noreferrer" target="_blank">${text}</a>`;
+
+export const notFoundPage = (request_path: string) => {
+  return `
+<!DOCTYPE html>
+<html lang="en">
+  ${head()}
+  ${body({
+    title: `Not Found ${request_path}`,
+  })}
+</html>`;
+};
+
+export const errorPage = () => {
+  return `
+<!DOCTYPE html>
+<html lang="en">
+  ${head()}
+  ${body({
+    title: `Ops. There was an error!`,
+  })}
+</html>`;
+};

@@ -5,6 +5,13 @@ export interface Credentials {
   token: string;
 }
 
+export interface Config {
+  chat_id: ChatId;
+  token: string;
+  disable_notification: boolean;
+  disable_web_page_preview: boolean;
+}
+
 export type SendMessage = (text: string) => Promise<{
   successes: string[];
   failures: string[];
@@ -15,13 +22,13 @@ export interface Client {
   sendMessage: SendMessage;
 }
 
-export const makeSendTelegramMessage = (creds: Credentials) => {
-  const { chat_id, token } = creds;
+export const makeSendTelegramMessage = (config: Config) => {
+  const { chat_id, token, disable_notification, disable_web_page_preview } =
+    config;
 
-  // make these options of sendTelegramMessage
   const options = {
-    disable_notification: false,
-    disable_web_page_preview: true,
+    disable_notification,
+    disable_web_page_preview,
     parse_mode: "HTML",
   };
 

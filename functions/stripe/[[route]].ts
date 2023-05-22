@@ -4,8 +4,8 @@ import { zValidator } from "@hono/zod-validator";
 import { handle } from "hono/cloudflare-pages";
 import { logger } from "hono/logger";
 import { prettyJSON } from "hono/pretty-json";
-import { head, body, anchor } from "../_html.js";
-import type { AppEventContext } from "../_middleware.js";
+import { head, body, anchor, notFoundPage, errorPage } from "../_html.js";
+import type { AppEventContext } from "../_environment.js";
 import {
   Emoji,
   eventIsIgnoredMessage,
@@ -39,7 +39,7 @@ const textDetails = ({
   ];
 };
 
-const app = new Hono();
+const app = new Hono().basePath("/stripe");
 
 const stripe_config: Stripe.StripeConfig = {
   // https://stripe.com/docs/api/versioning
@@ -59,10 +59,16 @@ app.use(
   })
 );
 
-app.notFound((ctx) => ctx.json({ message: "Not Found", ok: false }, 404));
+app.notFound((ctx) => {
+  // throw new Error(`this is a test to check the error page`);
+  return ctx.html(notFoundPage(ctx.req.path), 404);
+});
 
-// https://developers.cloudflare.com/pages/platform/functions/routing/
-// https://developers.cloudflare.com/pages/platform/functions/api-reference/
+// https://hono.dev/api/hono#error-handling
+app.onError((err, ctx) => {
+  console.error(`${err}`);
+  return ctx.html(errorPage(), 500);
+});
 
 app.get("/", async (ctx) => {
   const webhook_endpoint = (ctx.req as any).stripe_webhook_endpoint as string;
@@ -222,6 +228,4 @@ app.post("/", zValidator("json", post_request_body), async (ctx) => {
   }
 });
 
-export const onRequest = handle(app, "/stripe");
-// Note: basePath seems not to work well with Hono.
-// app.basePath("/stripe");
+export const onRequest = handle(app);

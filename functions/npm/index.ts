@@ -1,5 +1,5 @@
 import type { Env } from "../_environment.js";
-import type { Client } from "../_telegram_client.js";
+import type { Client } from "../_telegram-plugin.js";
 import { head, body } from "../_html.js";
 import { Emoji } from "../_utils.js";
 import { post_request_body } from "./_schemas.js";

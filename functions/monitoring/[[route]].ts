@@ -4,15 +4,16 @@ import { operationListText } from "@jackdbd/telegram-text-messages";
 import { handle } from "hono/cloudflare-pages";
 import { logger } from "hono/logger";
 import { prettyJSON } from "hono/pretty-json";
-import type { AppEventContext } from "../_middleware.js";
+import type { AppEventContext } from "../_environment.js";
 import { Emoji } from "../_utils.js";
 import { post_request_body } from "./_schemas.js";
 
-const app = new Hono();
-app.basePath("/monitoring");
+const app = new Hono().basePath("/monitoring");
 app.use("*", logger());
 app.use("*", prettyJSON());
-app.notFound((ctx) => ctx.json({ message: "Not Found", ok: false }, 404));
+app.notFound((ctx) => {
+  return ctx.json({ message: `Not Found ${ctx.req.path}`, ok: false }, 404);
+});
 
 app.post("/", zValidator("json", post_request_body), async (ctx) => {
   if (!ctx.env) {

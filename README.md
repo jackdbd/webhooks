@@ -2,6 +2,10 @@
 
 Application that I use to process webhook events fired by several services: [Cloud Monitoring](https://cloud.google.com/monitoring/support/notification-options#webhooks), [npm.js](https://docs.npmjs.com/cli/v7/commands/npm-hook), [Stripe](https://stripe.com/docs/webhooks), etc. All webhooks are hosted as a single application on Cloudflare Pages. Some routes are handled by the [Cloudflare Pages Functions routing](https://developers.cloudflare.com/pages/platform/functions/routing/). Some others are handled by [Hono](https://hono.dev/).
 
+> :warning: **Warning:**
+>
+> Don't use wrangler 3 untile [this bug](https://github.com/cloudflare/workers-sdk/issues/3262) is fixed.
+
 ## Installation
 
 ```sh

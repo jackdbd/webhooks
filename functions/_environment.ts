@@ -1,4 +1,5 @@
 import type { Fetcher } from "@cloudflare/workers-types";
+import type { Client as TelegramClient } from "./_telegram-plugin.js";
 
 /**
  * Environment variables I defined for this Cloudflare Pages project.
@@ -16,3 +17,12 @@ export interface Env {
   TELEGRAM_TOKEN?: string;
   USERNAME?: string;
 }
+
+export interface Data {
+  telegram: TelegramClient;
+}
+
+/**
+ * Event context available in this Cloudflare Pages Functions app.
+ */
+export type AppEventContext = EventContext<Env, any, Data>;
