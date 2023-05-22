@@ -21,6 +21,8 @@ export const onRequestGet: PagesFunction<Env> = (_ctx) => {
   ${body({ title, instructions })}
 </html>`;
 
+  // throw new Error(`This is a test error`);
+
   return new Response(html, {
     headers: {
       "content-type": "text/html;charset=UTF-8",

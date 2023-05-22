@@ -36,7 +36,6 @@ export const onError: ErrorHandler = async (err, ctx) => {
         message: `Message sent to Telegram chat: ${error_title}`,
       });
     } catch (ex: any) {
-      console.error(`${ex}`);
       console.error({
         error: ex,
         message: `Could not sent message to Telegram chat`,

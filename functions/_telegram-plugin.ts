@@ -2,8 +2,10 @@ import type {
   EventContext,
   PagesPluginFunction,
 } from "@cloudflare/workers-types";
+import { errorText } from "@jackdbd/telegram-text-messages";
 import { ChatId, makeSendTelegramMessage } from "./_telegram-client.js";
 import type { Credentials, Client } from "./_telegram-client.js";
+import { Emoji } from "./_utils.js";
 export type { Client } from "./_telegram-client.js";
 
 /**
@@ -56,6 +58,7 @@ const defaultOrProvided = (default_value: boolean, b?: boolean) => {
   }
 };
 
+// store the Telegram client in a global variable, so we reuse it across requests
 let telegram: Client | undefined = undefined;
 
 export const telegramPlugin = <E extends TelegramPluginEnv = TelegramPluginEnv>(
@@ -65,53 +68,78 @@ export const telegramPlugin = <E extends TelegramPluginEnv = TelegramPluginEnv>(
   let chat_id = pluginArgs ? pluginArgs.chat_id : undefined;
   let token = pluginArgs ? pluginArgs.token : undefined;
 
-  return function telegramPluginInner(
+  return async function telegramPluginInner(
     ctx: EventContext<E, any, Record<string, Client>>
   ) {
-    if (telegram) {
-      ctx.data.telegram = telegram;
-      return ctx.next();
-    }
-
-    console.log("initialize Telegram client");
-    if (ctx.env && ctx.env.TELEGRAM) {
-      const creds = JSON.parse(ctx.env.TELEGRAM) as Credentials;
-      if (creds.chat_id) {
-        chat_id = creds.chat_id;
+    if (!telegram) {
+      console.log("initialize Telegram client");
+      if (ctx.env && ctx.env.TELEGRAM) {
+        const creds = JSON.parse(ctx.env.TELEGRAM) as Credentials;
+        if (creds.chat_id) {
+          chat_id = creds.chat_id;
+        }
+        if (creds.token) {
+          token = creds.token;
+        }
       }
-      if (creds.token) {
-        token = creds.token;
+
+      if (!chat_id) {
+        throw new Error(`Telegram chat_id not set`);
       }
-    }
 
-    if (!chat_id) {
-      throw new Error(`Telegram chat_id not set`);
-    }
+      if (!token) {
+        throw new Error(`Telegram token not set`);
+      }
 
-    if (!token) {
-      throw new Error(`Telegram token not set`);
+      telegram = {
+        sendMessage: makeSendTelegramMessage({
+          chat_id,
+          token,
+          disable_notification: defaultOrProvided(
+            defaults.disable_notification,
+            pluginArgs && pluginArgs.disable_notification
+          ),
+          disable_web_page_preview: defaultOrProvided(
+            defaults.disable_web_page_preview,
+            pluginArgs && pluginArgs.disable_web_page_preview
+          ),
+        }),
+      };
     }
-
-    // store the Telegram client in a global variable, so we don't reinitialize
-    // it on every request
-    telegram = {
-      sendMessage: makeSendTelegramMessage({
-        chat_id,
-        token,
-        disable_notification: defaultOrProvided(
-          defaults.disable_notification,
-          pluginArgs && pluginArgs.disable_notification
-        ),
-        disable_web_page_preview: defaultOrProvided(
-          defaults.disable_web_page_preview,
-          pluginArgs && pluginArgs.disable_web_page_preview
-        ),
-      }),
-    };
 
     // make the telegram client available to middlewares and handlers
     ctx.data.telegram = telegram;
 
-    return ctx.next();
+    // same pattern used here:
+    // https://github.com/cloudflare/pages-plugins/blob/main/packages/sentry/functions/_middleware.ts
+    try {
+      return await ctx.next();
+    } catch (ex: any) {
+      const req_url = new URL(ctx.request.url);
+      const err_name = ex.name || "Error";
+      const error_title = `${err_name} encountered at <code>${ctx.request.method} ${req_url.pathname}</code>`;
+
+      try {
+        const result = await ctx.data.telegram.sendMessage(
+          errorText({
+            app_name: `${Emoji.Hook} webhooks`,
+            app_version: "0.0.1",
+            error_title,
+            error_message: ex.message || "no error message",
+          })
+        );
+        console.log({
+          ...result,
+          message: `Message sent to Telegram chat: ${error_title}`,
+        });
+      } catch (ex: any) {
+        console.error({
+          error: ex,
+          message: `Could not sent message to Telegram chat`,
+        });
+      } finally {
+        throw ex;
+      }
+    }
   };
 };
