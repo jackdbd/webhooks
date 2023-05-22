@@ -92,15 +92,17 @@ curl "$WEBHOOKS_URL/npm" \
 GET request made by a [WebPageTest pingback](https://docs.webpagetest.org/integrations/):
 
 ```sh
-curl "$WEBHOOKS_URL/webpagetest?id=some-webpagetest-test-id" \
-  -X GET
+curl "$WEBHOOKS_URL/webpagetest?id=some-webpagetest-test-id"
 ```
 
 ## Deploy
 
-todo
+I enabled automatic deployments, so the application is automatically deployed to Cloudflare Pages on each `git push` (`main` is the production branch, all other branches are `preview` branches).
+
+You can also deploy manually using this command:
+
 ```sh
-wrangler pages publish ./pages
-# in alternative, run this npm script:
 npm run deploy
+# which is equivalent to:
+wrangler pages publish ./pages
 ```
