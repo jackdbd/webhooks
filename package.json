@@ -16,12 +16,13 @@
     "logs": "wrangler pages deployment tail --project-name webhooks",
     "nuke": "rm -rf node_modules package-lock.json",
     "make-dev-vars": "node scripts/make-dev-vars.mjs",
-    "pages:dev": "wrangler pages dev ./pages --local --live-reload --port 8788 --compatibility-date=2023-05-18",
+    "pages:dev": "wrangler pages dev ./pages --local --live-reload --port 8789 --compatibility-date=2023-05-18",
     "stripe:webook-secret": "stripe listen --api-key $STRIPE_API_KEY_TEST --print-secret",
     "tunnel": "ngrok http 8788"
   },
   "dependencies": {
     "@hono/zod-validator": "0.1.2",
+    "@jackdbd/cloudflare-pages-plugin-telegram": "^0.1.0",
     "@jackdbd/telegram-text-messages": "1.2.0",
     "hono": "3.2.1",
     "stripe": "12.6.0",
@@ -29,7 +30,9 @@
   },
   "devDependencies": {
     "@cloudflare/workers-types": "4.20230518.0",
+    "@types/react": "^18.2.6",
     "npm-run-all": "4.1.5",
+    "prettier": "^2.8.8",
     "wrangler": "2.20.0"
   }
 }
