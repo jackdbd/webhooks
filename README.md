@@ -59,6 +59,8 @@ In the **second terminal**, run this command, which create a HTTPS => HTTP tunne
 
 ```sh
 ngrok http 8788
+# in alternative, run this npm script:
+npm run tunnel
 ```
 
 Now copy the public, **Forwarding URL** that ngrok gave you, and assign it to the `WEBHOOKS_URL` environment variable (for example, paste it in your `.envrc` file and reload it with `direnv allow`). Be sure not to include any trailing slashes.
