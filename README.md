@@ -1,10 +1,10 @@
-# webhooks
+# webhooks 🪝
 
 Application that I use to process webhook events fired by several services: [Cloud Monitoring](https://cloud.google.com/monitoring/support/notification-options#webhooks), [npm.js](https://docs.npmjs.com/cli/v7/commands/npm-hook), [Stripe](https://stripe.com/docs/webhooks), etc. All webhooks are hosted as a single application on Cloudflare Pages. Some routes are handled by the [Cloudflare Pages Functions routing](https://developers.cloudflare.com/pages/platform/functions/routing/). Some others are handled by [Hono](https://hono.dev/).
 
 > :warning: **Warning:**
 >
-> Don't use wrangler 3 untile [this bug](https://github.com/cloudflare/workers-sdk/issues/3262) is fixed.
+> Don't use wrangler 3 until [this bug](https://github.com/cloudflare/workers-sdk/issues/3262) is fixed.
 
 ## Installation
 
@@ -45,7 +45,7 @@ stripe trigger --api-key $STRIPE_API_KEY_TEST price.created
 stripe trigger --api-key $STRIPE_API_KEY_TEST product.created
 ```
 
-### All other webhooks
+### Instructions for all webhooks except the ones from Stripe
 
 In the **first terminal**, run this command:
 
@@ -73,45 +73,53 @@ Now copy the public, **Forwarding URL** that ngrok gave you, and assign it to th
 
 In the **third terminal**, make some POST requests simulating webhook events sent by a third-party service. See a few examples below.
 
-#### cal.com webhooks
+### cal.com webhooks
 
-POST request made by [cal.com](https://cal.com/docs/core-features/webhooks):
+See the [documentation on cal.com](https://cal.com/docs/core-features/webhooks).
+
+Create a new booking:
 
 ```sh
 curl "$WEBHOOKS_URL/cal" \
   -X POST \
   -H "Content-Type: application/json" \
-  -H "X-Cal-Signature-256: foo" \
+  -H "X-Cal-Signature-256: hex-string-sent-by-cal.com" \
   -d "@./assets/webhook-events/cal/booking-created.json"
 ```
 
-```sh
-curl "$WEBHOOKS_URL/cal" \
-  -X POST \
-  -H "Content-Type: application/json" \
-  -H "X-Cal-Signature-256: foo" \
-  -d "@./assets/webhook-events/cal/booking-cancelled.json"
-```
+Reschedule a booking:
 
 ```sh
 curl "$WEBHOOKS_URL/cal" \
   -X POST \
   -H "Content-Type: application/json" \
-  -H "X-Cal-Signature-256: foo" \
+  -H "X-Cal-Signature-256: hex-string-sent-by-cal.com" \
   -d "@./assets/webhook-events/cal/booking-rescheduled.json"
 ```
 
+Cancel a booking:
+
 ```sh
 curl "$WEBHOOKS_URL/cal" \
   -X POST \
   -H "Content-Type: application/json" \
-  -H "X-Cal-Signature-256: foo" \
+  -H "X-Cal-Signature-256: hex-string-sent-by-cal.com" \
+  -d "@./assets/webhook-events/cal/booking-cancelled.json"
+```
+
+Event sent by cal.com when a meeting ends:
+
+```sh
+curl "$WEBHOOKS_URL/cal" \
+  -X POST \
+  -H "Content-Type: application/json" \
+  -H "X-Cal-Signature-256: hex-string-sent-by-cal.com" \
   -d "@./assets/webhook-events/cal/meeting-ended.json"
 ```
 
-#### Cloud Monitoring webhooks
+### Cloud Monitoring webhooks
 
-POST request made by [Cloud Monitoring](https://cloud.google.com/monitoring/support/notification-options#webhooks):
+See the [documentation on Cloud Monitoring](https://cloud.google.com/monitoring/support/notification-options#webhooks).
 
 ```sh
 curl "$WEBHOOKS_URL/monitoring" \
@@ -120,9 +128,9 @@ curl "$WEBHOOKS_URL/monitoring" \
   -d "@./assets/webhook-events/cloud-monitoring/incident-created.json"
 ```
 
-#### npm.js webhooks
+### npm.js webhooks
 
-POST request made by a [npm hook](https://docs.npmjs.com/cli/v9/commands/npm-hook):
+See the [documentation on npm.js](https://docs.npmjs.com/cli/v9/commands/npm-hook).
 
 ```sh
 curl "$WEBHOOKS_URL/npm" \
@@ -131,9 +139,9 @@ curl "$WEBHOOKS_URL/npm" \
   -d "@./assets/webhook-events/npm/package-changed.json"
 ```
 
-#### WebPageTest pingbacks
+### WebPageTest pingbacks
 
-GET request made by a [WebPageTest pingback](https://docs.webpagetest.org/integrations/):
+See the [documentation on WebPageTest](https://docs.webpagetest.org/integrations/).
 
 ```sh
 curl "$WEBHOOKS_URL/webpagetest?id=some-webpagetest-test-id"
@@ -149,7 +157,7 @@ npm run logs
 npx wrangler pages deployment tail --project-name webhooks
 ```
 
-[See here](https://developers.cloudflare.com/pages/platform/functions/debugging-and-logging/) for details.
+[See the docs](https://developers.cloudflare.com/pages/platform/functions/debugging-and-logging/) for details.
 
 ## Deploy
 
