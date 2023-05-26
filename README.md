@@ -138,6 +138,7 @@ See the [documentation on npm.js](https://docs.npmjs.com/cli/v9/commands/npm-hoo
 curl "$WEBHOOKS_URL/npm" \
   -X POST \
   -H "Content-Type: application/json" \
+  -H "x-npm-signature: hex-string-sent-by-npm.js" \
   -d "@./assets/webhook-events/npm/package-changed.json"
 ```
 

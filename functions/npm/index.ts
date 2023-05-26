@@ -91,9 +91,12 @@ export const onRequestPost: PagesFunction<
   // TODO: use zod to validate x-npm-signature
   console.log(`npm hook signature is ${signature}`)
 
-  let text = `<b>${Emoji.Hook} npm.js hook (${host})</b>`
+  let text = `<b>${Emoji.Hook} npm.js hook ${event}</b>`
   text = text.concat('\n\n')
   text = text.concat(`<pre><code>${JSON.stringify(obj, null, 2)}</code></pre>`)
+
+  text = text.concat('\n\n')
+  text = text.concat(`${Emoji.Hook} <i>event handled by ${host}</i>`)
 
   const telegram = ctx.data.telegram
   const { failures, successes, warnings } = await telegram.sendMessage(text)
