@@ -25,9 +25,13 @@ export enum Emoji {
   SpeakingHead = '🗣️',
   Success = '✅',
   Timer = '⏱️',
+  Toolbox = '🧰',
   User = '👤',
+  Valid = '✅',
   Warning = '⚠️'
 }
+
+const PREFIX = `${Emoji.Toolbox} [utils]`
 
 export const notWebhookEnpointForStripeAccount = (url: string) =>
   `The URL you passed (${url}) is not a Stripe webhook endpoint for this Stripe account. Maybe you passed a Stripe client in TEST mode and a URL which is a webhook endpoint for Stripe in LIVE mode, or vice versa?`
@@ -67,4 +71,55 @@ export const badRequest = (details?: string) => {
       'Content-Type': 'application/json;charset=UTF-8'
     }
   })
+}
+
+export const internalServerError = (details?: string) => {
+  const message = details
+    ? `Internal Server Error: ${details}`
+    : `Internal Server Error`
+
+  return new Response(JSON.stringify({ message }, null, 2), {
+    status: 500,
+    headers: {
+      'Content-Type': 'application/json;charset=UTF-8'
+    }
+  })
+}
+
+/**
+ * Use a webhook secret key to create an HMAC.
+ *
+ * https://developer.mozilla.org/en-US/docs/Web/API/SubtleCrypto/importKey
+ */
+export const hmacKey = async (secret: string) => {
+  const encoder = new TextEncoder()
+  const keyData = encoder.encode(secret)
+  const algorithm = { name: 'HMAC', hash: 'SHA-256' }
+  const extractable = false
+  const keyUsages = ['sign', 'verify'] as KeyUsage[]
+
+  const cryptoKey = await crypto.subtle.importKey(
+    'raw',
+    keyData,
+    algorithm,
+    extractable,
+    keyUsages
+  )
+
+  console.log(
+    `${PREFIX} HMAC SHA-256 created from secret ${secret} (this key can: ${keyUsages.join(
+      ', '
+    )})`
+  )
+
+  return cryptoKey
+}
+
+export const hexStringToArrayBuffer = (hex: string) => {
+  const match_arr = hex.match(/../g)
+  if (match_arr) {
+    return new Uint8Array(match_arr.map((h) => parseInt(h, 16))).buffer
+  } else {
+    return new Uint8Array([]).buffer
+  }
 }

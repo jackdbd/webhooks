@@ -1,0 +1,91 @@
+{
+  "triggerEvent": "BOOKING_CANCELLED",
+  "createdAt": "2023-05-24T09:30:00.538Z",
+  "payload": {
+    "title": "15 Min Meeting between Giacomo Debidda and Jack",
+    "type": "15 Min Meeting",
+    "description": "test HMAC",
+    "customInputs": {},
+    "userFieldsResponses": {
+      "where-did-you-hear-about-me": {
+        "label": "Where did you hear about me?",
+        "value": "personal website/blog (giacomodebidda.com)"
+      }
+    },
+    "responses": {
+      "name": {
+        "label": "your_name",
+        "value": "Jack"
+      },
+      "email": {
+        "label": "email_address",
+        "value": "jackdebidda@gmail.com"
+      },
+      "location": {
+        "label": "location",
+        "value": {
+          "optionValue": "",
+          "value": "integrations:google:meet"
+        }
+      },
+      "where-did-you-hear-about-me": {
+        "label": "Where did you hear about me?",
+        "value": "personal website/blog (giacomodebidda.com)"
+      },
+      "notes": {
+        "label": "additional_notes",
+        "value": "test HMAC"
+      },
+      "guests": {
+        "label": "additional_guests"
+      },
+      "rescheduleReason": {
+        "label": "reschedule_reason"
+      }
+    },
+    "startTime": "2023-05-30T08:30:00+00:00",
+    "endTime": "2023-05-30T08:45:00+00:00",
+    "organizer": {
+      "email": "giacomo@giacomodebidda.com",
+      "name": "Giacomo Debidda",
+      "timeZone": "Europe/Amsterdam",
+      "language": {
+        "locale": "en"
+      }
+    },
+    "attendees": [
+      {
+        "name": "Jack",
+        "email": "jackdebidda@gmail.com",
+        "timeZone": "Europe/Rome",
+        "language": {
+          "locale": "en"
+        }
+      }
+    ],
+    "uid": "gZD1rXeBELoDWzRGGrha6n",
+    "location": "integrations:google:meet",
+    "destinationCalendar": {
+      "id": 85064,
+      "integration": "google_calendar",
+      "externalId": "giacomo@giacomodebidda.com",
+      "userId": null,
+      "eventTypeId": 123860,
+      "credentialId": 42838
+    },
+    "cancellationReason": "test logs in cancel",
+    "team": {
+      "name": "",
+      "members": []
+    },
+    "seatsPerTimeSlot": null,
+    "seatsShowAttendees": null,
+    "eventTitle": "15 Min Meeting",
+    "eventDescription": "🗣️ Let's have a quick chat about what you have in mind. We can talk in English or Italian.\n\n<p><br></p>\n\n🔗 I'll send you a Google Meet link for our video call.\n\n<p><br></p>\n\n⚠️ Send me a DM on [Twitter](https://) or [LinkedIn](https://www.linkedin.com/in/giacomodebidda/) if no time slot fits your schedule.",
+    "requiresConfirmation": null,
+    "price": null,
+    "currency": "usd",
+    "length": 15,
+    "status": "CANCELLED"
+  }
+}

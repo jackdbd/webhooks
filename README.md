@@ -90,7 +90,15 @@ curl "$WEBHOOKS_URL/cal" \
   -X POST \
   -H "Content-Type: application/json" \
   -H "X-Cal-Signature-256: foo" \
-  -d "@./assets/webhook-events/cal/booking-canceled.json"
+  -d "@./assets/webhook-events/cal/booking-cancelled.json"
+```
+
+```sh
+curl "$WEBHOOKS_URL/cal" \
+  -X POST \
+  -H "Content-Type: application/json" \
+  -H "X-Cal-Signature-256: foo" \
+  -d "@./assets/webhook-events/cal/booking-rescheduled.json"
 ```
 
 ```sh
@@ -130,6 +138,18 @@ GET request made by a [WebPageTest pingback](https://docs.webpagetest.org/integr
 ```sh
 curl "$WEBHOOKS_URL/webpagetest?id=some-webpagetest-test-id"
 ```
+
+## Troubleshooting webhooks
+
+Access your Cloudflare Pages Functions logs by using the Cloudflare dashboard or the Wrangler CLI:
+
+```sh
+npm run logs
+# which is equivalent to:
+npx wrangler pages deployment tail --project-name webhooks
+```
+
+[See here](https://developers.cloudflare.com/pages/platform/functions/debugging-and-logging/) for details.
 
 ## Deploy
 

@@ -1,0 +1,122 @@
+{
+  "triggerEvent": "BOOKING_RESCHEDULED",
+  "createdAt": "2023-05-26T09:30:00.538Z",
+  "payload": {
+    "type": "15 Min Meeting",
+    "title": "15 Min Meeting between Giacomo Debidda and Jack",
+    "description": "🗣️ Let's have a quick chat about what you have in mind. We can talk in English or Italian.\n\n<p><br></p>\n\n🔗 I'll send you a Google Meet link for our video call.\n\n<p><br></p>\n\n⚠️ Send me a DM on [Twitter](https://) or [LinkedIn](https://www.linkedin.com/in/giacomodebidda/) if no time slot fits your schedule.",
+    "additionalNotes": "some additional notes here",
+    "customInputs": {},
+    "startTime": "2023-05-29T05:45:00Z",
+    "endTime": "2023-05-29T06:00:00Z",
+    "organizer": {
+      "id": 39442,
+      "name": "Giacomo Debidda",
+      "email": "giacomo@giacomodebidda.com",
+      "username": "giacomodebidda",
+      "timeZone": "Europe/Amsterdam",
+      "language": {
+        "locale": "en"
+      },
+      "timeFormat": "HH:mm"
+    },
+    "responses": {
+      "name": {
+        "label": "your_name",
+        "value": "Jack"
+      },
+      "email": {
+        "label": "email_address",
+        "value": "jackdebidda@gmail.com"
+      },
+      "location": {
+        "label": "location",
+        "value": {
+          "optionValue": "",
+          "value": "integrations:google:meet"
+        }
+      },
+      "where-did-you-hear-about-me": {
+        "label": "Where did you hear about me?",
+        "value": "Twitter"
+      },
+      "notes": {
+        "label": "additional_notes",
+        "value": "test hmac"
+      },
+      "guests": {
+        "label": "additional_guests"
+      },
+      "rescheduleReason": {
+        "label": "reschedule_reason",
+        "value": "test reschedule"
+      }
+    },
+    "userFieldsResponses": {
+      "where-did-you-hear-about-me": {
+        "label": "Where did you hear about me?",
+        "value": "Twitter"
+      }
+    },
+    "attendees": [
+      {
+        "email": "jackdebidda@gmail.com",
+        "name": "Jack",
+        "timeZone": "Europe/Rome",
+        "language": {
+          "locale": "en"
+        }
+      }
+    ],
+    "location": "integrations:google:meet",
+    "destinationCalendar": {
+      "id": 85064,
+      "integration": "google_calendar",
+      "externalId": "giacomo@giacomodebidda.com",
+      "userId": null,
+      "eventTypeId": 123860,
+      "credentialId": 42838
+    },
+    "hideCalendarNotes": false,
+    "requiresConfirmation": null,
+    "eventTypeId": 123860,
+    "seatsShowAttendees": true,
+    "seatsPerTimeSlot": null,
+    "uid": "2YBRXiP6hVmMYCrdzJxnoh",
+    "videoCallData": {
+      "type": "google_meet_video",
+      "id": null,
+      "password": null,
+      "url": "https://meet.google.com/dmm-rqxs-vye"
+    },
+    "conferenceData": {
+      "createRequest": {
+        "requestId": "8a0ce172-f69a-51b5-8481-93feb73d58e2"
+      }
+    },
+    "iCalUID": "fqf85m9vmidv0rk7ahvft58kro@google.com",
+    "appsStatus": [
+      {
+        "appName": "Google Calendar",
+        "type": "google_calendar",
+        "success": 1,
+        "failures": 0,
+        "errors": [],
+        "warnings": []
+      }
+    ],
+    "eventTitle": "15 Min Meeting",
+    "eventDescription": "🗣️ Let's have a quick chat about what you have in mind. We can talk in English or Italian.\n\n<p><br></p>\n\n🔗 I'll send you a Google Meet link for our video call.\n\n<p><br></p>\n\n⚠️ Send me a DM on [Twitter](https://) or [LinkedIn](https://www.linkedin.com/in/giacomodebidda/) if no time slot fits your schedule.",
+    "price": 0,
+    "currency": "usd",
+    "length": 15,
+    "bookingId": 412066,
+    "rescheduleUid": "fczPTTrefSbxPHtJx82Gaa",
+    "rescheduleStartTime": "2023-05-31T05:00:00Z",
+    "rescheduleEndTime": "2023-05-31T05:15:00Z",
+    "metadata": {
+      "videoCallUrl": "https://meet.google.com/dmm-rqxs-vye"
+    },
+    "status": "ACCEPTED"
+  }
+}

@@ -8,7 +8,7 @@ import { z } from 'zod'
 export const post_request_body = z.object({
   triggerEvent: z.enum([
     'BOOKING_CREATED',
-    'BOOKING_CANCELED',
+    'BOOKING_CANCELLED',
     'BOOKING_RESCHEDULED',
     'MEETING_ENDED',
     'RECORDING_DOWNLOAD_LINK_READY'
