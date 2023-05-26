@@ -1,0 +1,8 @@
+{
+  "triggerEvent": "MEETING_ENDED",
+  "createdAt": "2023-05-24T09:30:00.538Z",
+  "payload": {
+    "type": "60min",
+    "title": "60min between Pro Example and John Doe"
+  }
+}

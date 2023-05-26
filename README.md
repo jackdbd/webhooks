@@ -14,6 +14,10 @@ npm install
 
 ## Development
 
+When developing handlers for [Stripe webhooks](https://stripe.com/docs/webhooks), you will need 2 terminals open to develop this application. In all other cases you will need 3 terminals open. I use [Tmux](https://github.com/tmux/tmux/wiki) for this.
+
+### Environment variables & secrets
+
 When developing an app for Cloudflare Workers or Cloudflare Pages with `wrangler dev`, you can set environment variables and secrets in a `.dev.vars` file. This file must be kept in the root directory of your project. Given that some secrets might be JSON strings, I like to keep them the [secrets](./secrets/README.md) directory. Then I generate the `.dev.vars` file using this script:
 
 ```sh
@@ -22,10 +26,6 @@ node scripts/make-dev-vars.mjs
 npm run make-dev-vars
 ```
 
-When developing handlers for [Stripe webhooks](https://stripe.com/docs/webhooks), you will need 2 terminals open to develop this application. In all other cases you will need 3 terminals open. I use [Tmux](https://github.com/tmux/tmux/wiki) for this.
-
-The main web page will be available at: http://localhost:8788/
-
 ### Stripe webhooks
 
 In the **first terminal**, run this command, which watches all files using [wrangler](https://github.com/cloudflare/workers-sdk) and forwards all Stripe webhook events to `localhost:8788` using the [Stripe CLI](https://github.com/stripe/stripe-cli):
@@ -33,6 +33,8 @@ In the **first terminal**, run this command, which watches all files using [wran
 ```sh
 npm run dev
 ```
+
+The main web page will be available at: http://localhost:8788/
 
 In the **second terminal**, [trigger](https://stripe.com/docs/cli/trigger) some Stripe events:
 
@@ -51,6 +53,8 @@ In the **first terminal**, run this command:
 npm run dev
 ```
 
+The main web page will be available at: http://localhost:8788/
+
 In the **second terminal**, run this command, which create a HTTPS => HTTP tunnel with [ngrok](https://ngrok.com/) on port `8788`:
 
 ```sh
@@ -68,6 +72,34 @@ Now copy the public, **Forwarding URL** that ngrok gave you, and assign it to th
 > - visit http://localhost:4040/inspect/http to inspect/replay past requests that were tunneled by ngrok.
 
 In the **third terminal**, make some POST requests simulating webhook events sent by a third-party service. See a few examples below.
+
+#### cal.com webhooks
+
+POST request made by [cal.com](https://cal.com/docs/core-features/webhooks):
+
+```sh
+curl "$WEBHOOKS_URL/cal" \
+  -X POST \
+  -H "Content-Type: application/json" \
+  -H "X-Cal-Signature-256: foo" \
+  -d "@./assets/webhook-events/cal/booking-created.json"
+```
+
+```sh
+curl "$WEBHOOKS_URL/cal" \
+  -X POST \
+  -H "Content-Type: application/json" \
+  -H "X-Cal-Signature-256: foo" \
+  -d "@./assets/webhook-events/cal/booking-canceled.json"
+```
+
+```sh
+curl "$WEBHOOKS_URL/cal" \
+  -X POST \
+  -H "Content-Type: application/json" \
+  -H "X-Cal-Signature-256: foo" \
+  -d "@./assets/webhook-events/cal/meeting-ended.json"
+```
 
 #### Cloud Monitoring webhooks
 

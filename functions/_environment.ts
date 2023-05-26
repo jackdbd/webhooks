@@ -8,6 +8,7 @@ import type { Client as TelegramClient } from '@jackdbd/cloudflare-pages-plugin-
  */
 export interface Env {
   ASSETS: Fetcher
+  CAL_WEBHOOK_SECRET?: string
   PASSWORD?: string
   STRIPE_API_KEY?: string
   STRIPE_WEBHOOK_SECRET?: string
