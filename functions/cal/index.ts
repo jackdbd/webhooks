@@ -1,5 +1,5 @@
 import type { Client as TelegramClient } from '@jackdbd/cloudflare-pages-plugin-telegram'
-import type { CalWebhookEvent } from '../_cal-com-webhooks-schemas.js'
+import type { CalWebhookEvent } from '../_cal-com-webhooks-plugin-schemas.js'
 import type { Env } from '../_environment.js'
 import { head, body } from '../_html.js'
 import { Emoji } from '../_utils.js'
@@ -33,7 +33,6 @@ export const onRequestPost: PagesFunction<
     CalWebhookEvent | TelegramClient
   >
 > = async (ctx) => {
-  // console.log('=== ctx.request.headers ===', ctx.request.headers)
   const webhook_event = ctx.data.calComValidatedWebhookEvent as CalWebhookEvent
   const verified_info = `<i>the event was verified by the cal.com webhooks middleware</i>`
   const telegram = ctx.data.telegram as TelegramClient

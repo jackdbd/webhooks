@@ -1,5 +1,9 @@
-import { post_request_body } from './_cal-com-webhooks-schemas.js'
-import type { CalWebhookEvent } from './_cal-com-webhooks-schemas.js'
+import { post_request_body } from './_cal-com-webhooks-plugin-schemas.js'
+import type { CalWebhookEvent } from './_cal-com-webhooks-plugin-schemas.js'
+import {
+  hexStringToArrayBuffer,
+  hmacKey
+} from './_cal-com-webhooks-plugin-utils.js'
 
 // https://emojipedia.org/
 export enum Emoji {
@@ -35,49 +39,22 @@ export interface Data {
  */
 export interface PluginArgs {
   secret?: string
+  shouldValidate?: boolean
 }
 
 export type PluginData = { calComValidatedWebhookEvent: CalWebhookEvent }
 
-const defaults = {
-  secret: 'my-webhook-secret'
-}
-
-/**
- * Use a webhook secret key to create an HMAC.
- *
- * https://developer.mozilla.org/en-US/docs/Web/API/SubtleCrypto/importKey
- */
-export const hmacKey = async (secret: string) => {
-  const encoder = new TextEncoder()
-  const keyData = encoder.encode(secret)
-  const extractable = false
-  const keyUsages = ['sign', 'verify'] as KeyUsage[]
-
-  const cryptoKey = await crypto.subtle.importKey(
-    'raw',
-    keyData,
-    { name: 'HMAC', hash: 'SHA-256' },
-    extractable,
-    keyUsages
-  )
-
-  console.log(
-    `${PREFIX} HMAC SHA-256 created from signing secret ${secret} (this key can: ${keyUsages.join(
-      ', '
-    )})`
-  )
-
-  return cryptoKey
-}
-
-export const hexStringToArrayBuffer = (hex: string) => {
-  const match_arr = hex.match(/../g)
-  if (match_arr) {
-    return new Uint8Array(match_arr.map((h) => parseInt(h, 16))).buffer
+const defaultOrOptional = <T>(default_value: T, optional_value?: T) => {
+  if (optional_value !== undefined) {
+    return optional_value!
   } else {
-    return new Uint8Array([]).buffer
+    return default_value
   }
+}
+
+const defaults = {
+  secret: undefined,
+  shouldValidate: true
 }
 
 export type TelegramPagesPluginFunction<
@@ -100,7 +77,19 @@ export const badRequest = (details?: string) => {
 export const calComPlugin = <E extends CalComPluginEnv = CalComPluginEnv>(
   pluginArgs?: PluginArgs
 ) => {
-  let secret = pluginArgs?.secret
+  const options = pluginArgs || {}
+
+  let secret = defaultOrOptional(defaults.secret, options.secret)
+  const shouldValidate = defaultOrOptional(
+    defaults.shouldValidate,
+    options.shouldValidate
+  )
+
+  console.log({
+    message: `${PREFIX} configuration`,
+    secret,
+    shouldValidate
+  })
 
   // we declare the HMAC key here, to avoid recreating it on every request
   let key: CryptoKey
@@ -109,11 +98,29 @@ export const calComPlugin = <E extends CalComPluginEnv = CalComPluginEnv>(
   return async function calComPluginInner(
     ctx: EventContext<E, any, Record<string, CalWebhookEvent>>
   ) {
-    if (!secret) {
+    const audit_trail: string[] = []
+
+    if (secret) {
+      audit_trail.push(`secret set from pluginArgs: ${secret}`)
+    }
+
+    if (ctx.env.CAL_WEBHOOK_SECRET) {
+      if (secret) {
+        audit_trail.push(
+          `secret overridden using environment variable CAL_WEBHOOK_SECRET: ${ctx.env.CAL_WEBHOOK_SECRET}`
+        )
+      } else {
+        audit_trail.push(
+          `secret set from environment variable CAL_WEBHOOK_SECRET: ${ctx.env.CAL_WEBHOOK_SECRET}`
+        )
+      }
       secret = ctx.env.CAL_WEBHOOK_SECRET
     }
+
     if (!secret) {
-      throw new Error(`${PREFIX} secret not set`)
+      throw new Error(
+        `${PREFIX} secret not set. Set a signing secret for your cal.com webhooks either passing it when you instantiate this plugin, or using the environment variable CAL_WEBHOOK_SECRET`
+      )
     }
 
     // Verify the authenticity of the received payload
@@ -121,6 +128,7 @@ export const calComPlugin = <E extends CalComPluginEnv = CalComPluginEnv>(
 
     if (!key) {
       key = await hmacKey(secret)
+      audit_trail.push(`created HMAC key using secret: ${secret}`)
     }
 
     // cal.com uses a hex string as the signature. See here:
@@ -129,32 +137,24 @@ export const calComPlugin = <E extends CalComPluginEnv = CalComPluginEnv>(
     if (!signature_as_hex) {
       return badRequest('missing webhook signature')
     }
+    audit_trail.push(`found request header X-Cal-Signature-256`)
 
     // https://community.cloudflare.com/t/how-do-i-read-the-request-body-as-json/155393/2
     // Here we need to read the request body twice. We can either:
     // - clone the entire request using ctx.request.clone()
     // - use JSON parse on the UTF-8 decoded string
-    const request_payload = await ctx.request.arrayBuffer()
+    const req_payload = await ctx.request.arrayBuffer()
 
-    const host = ctx.request.headers.get('host')
     // https://developers.cloudflare.com/fundamentals/get-started/reference/http-request-headers/#x-real-ip
+    // https://developers.cloudflare.com/support/troubleshooting/restoring-visitor-ips/restoring-original-visitor-ips/
     const x_real_ip = ctx.request.headers.get('x-real-ip')
-    // https://developers.cloudflare.com/fundamentals/get-started/reference/http-request-headers/#cf-connecting-ip
-    const cf_connecting_ip = ctx.request.headers.get('cf-connecting-ip')
-    // https://developers.cloudflare.com/fundamentals/get-started/reference/http-request-headers/#x-forwarded-for
-    const x_forwarded_for = ctx.request.headers.get('x-forwarded-for')
-    console.log({
-      message: `${PREFIX} HTTP request headers for identifying the originating IP address of the client`,
-      cf_connecting_ip,
-      host,
-      x_forwarded_for,
-      x_real_ip
-    })
 
     let signature: ArrayBuffer
     if (x_real_ip === '127.0.0.1') {
-      // On localhost we discard the given signature, and compute it here instead
-      signature = await crypto.subtle.sign('HMAC', key, request_payload)
+      // If the POST request originated from localhost (e.g. curl making a POST
+      // request to a ngrok forwarding URL), we discard the given signature and
+      // compute it here instead. This way we ALWAYS verify the request body.
+      signature = await crypto.subtle.sign('HMAC', key, req_payload)
     } else {
       signature = hexStringToArrayBuffer(signature_as_hex)
     }
@@ -163,33 +163,41 @@ export const calComPlugin = <E extends CalComPluginEnv = CalComPluginEnv>(
       'HMAC',
       key,
       signature,
-      request_payload
+      req_payload
     )
 
     if (!verified) {
       return badRequest('invalid cal.com webhook event (signature mismatch)')
     }
+    audit_trail.push(`verified X-Cal-Signature-256 using HMAC key`)
 
-    const body = JSON.parse(decoder.decode(request_payload))
+    const req_body: CalWebhookEvent = JSON.parse(decoder.decode(req_payload))
 
-    const result = post_request_body.safeParse(body)
+    if (shouldValidate) {
+      const result = post_request_body.safeParse(req_body)
 
-    if (!result.success) {
-      const err = result.error
-      console.log({
-        message: `${PREFIX} Zod validation error`,
-        errors: err.errors,
-        issues: err.issues
-      })
-      return badRequest('invalid cal.com webhook event (invalid schema)')
+      if (!result.success) {
+        const err = result.error
+        console.log({
+          message: `${PREFIX} Zod validation error`,
+          errors: JSON.stringify(err.errors, null, 2),
+          issues: err.issues
+        })
+        return badRequest('invalid cal.com webhook event (invalid schema)')
+      }
+      audit_trail.push(`validated schema of request body`)
+    } else {
+      audit_trail.push(`skipped request body validation`)
     }
 
     // make the validated webhook event available to downstream middlewares and
     // request handlers
-    ctx.data.calComValidatedWebhookEvent = body as CalWebhookEvent
-    console.log(
-      `${PREFIX} webhook event validated and stored in ctx.data.calComValidatedWebhookEvent`
+    ctx.data.calComValidatedWebhookEvent = req_body
+    audit_trail.push(
+      `request body stored in ctx.data.calComValidatedWebhookEvent`
     )
+
+    console.log({ message: `${PREFIX} request audit trail`, audit_trail })
 
     return ctx.next()
   }
