@@ -33,6 +33,7 @@ export const onRequestPost: PagesFunction<
     CalWebhookEvent | TelegramClient
   >
 > = async (ctx) => {
+  // console.log('=== ctx.request.headers ===', ctx.request.headers)
   const webhook_event = ctx.data.calComValidatedWebhookEvent as CalWebhookEvent
   const verified_info = `<i>the event was verified by the cal.com webhooks middleware</i>`
   const telegram = ctx.data.telegram as TelegramClient

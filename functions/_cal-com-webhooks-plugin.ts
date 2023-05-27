@@ -136,8 +136,20 @@ export const calComPlugin = <E extends CalComPluginEnv = CalComPluginEnv>(
     // - use JSON parse on the UTF-8 decoded string
     const request_payload = await ctx.request.arrayBuffer()
 
+    const host = ctx.request.headers.get('host')
+    // https://developers.cloudflare.com/fundamentals/get-started/reference/http-request-headers/#x-real-ip
     const x_real_ip = ctx.request.headers.get('x-real-ip')
-    console.log(`${PREFIX} X-Real-IP: ${x_real_ip} `)
+    // https://developers.cloudflare.com/fundamentals/get-started/reference/http-request-headers/#cf-connecting-ip
+    const cf_connecting_ip = ctx.request.headers.get('cf-connecting-ip')
+    // https://developers.cloudflare.com/fundamentals/get-started/reference/http-request-headers/#x-forwarded-for
+    const x_forwarded_for = ctx.request.headers.get('x-forwarded-for')
+    console.log({
+      message: `${PREFIX} HTTP request headers for identifying the originating IP address of the client`,
+      cf_connecting_ip,
+      host,
+      x_forwarded_for,
+      x_real_ip
+    })
 
     let signature: ArrayBuffer
     if (x_real_ip === '127.0.0.1') {
