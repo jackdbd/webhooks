@@ -1,3 +1,3 @@
-import { calComPlugin } from '../_cal-com-webhooks-plugin.js'
+import calComPlugin from '@jackdbd/cloudflare-pages-plugin-cal-com'
 
-export const onRequest = [calComPlugin()]
+export const onRequestPost = [calComPlugin({ shouldValidate: true })]

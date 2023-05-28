@@ -1,11 +1,10 @@
-import type { Env } from '../_environment.js'
 import type { Client as TelegramClient } from '@jackdbd/cloudflare-pages-plugin-telegram'
+import type { AppEventContext, Env } from '../_environment.js'
 import { head, body } from '../_html.js'
-import { badRequest, Emoji } from '../_utils.js'
-import { post_request_body } from './_schemas.js'
+import { Emoji } from '../_utils.js'
 import type { NpmWebhookEvent } from './_schemas.js'
 
-export const onRequestGet: PagesFunction<Env> = (_ctx) => {
+export const onRequestGet = (_ctx: AppEventContext) => {
   const title = `How to list your npm hooks`
 
   const instructions = `
@@ -30,8 +29,8 @@ export const onRequestGet: PagesFunction<Env> = (_ctx) => {
   })
 }
 
-// TODO: I could develop a Cloudflare Pages plugin to validate the webhook event
-// fired by npm.js and make the validated event available in `context.data`
+type Data = Record<'npmValidatedWebhookEvent', NpmWebhookEvent> &
+  Record<'telegram', TelegramClient>
 
 /**
  * Handles a npm hook.
@@ -40,32 +39,15 @@ export const onRequestGet: PagesFunction<Env> = (_ctx) => {
  * - https://github.com/npm/npm-hook-receiver/blob/master/index.js
  * - https://github.com/npm/npm-hook-slack/blob/master/index.js
  */
-export const onRequestPost: PagesFunction<
-  Env,
-  any,
-  Record<'telegram', TelegramClient>
-> = async (ctx) => {
-  const body = await ctx.request.json()
+export const onRequestPost: PagesFunction<Env, any, Data> = async (ctx) => {
+  const webhook_event = ctx.data.npmValidatedWebhookEvent
+  const verified_info = `<i>the event was verified by the npmjs.com webhooks middleware</i>`
+  const telegram = ctx.data.telegram
 
-  const result = post_request_body.safeParse(body)
-
-  if (!result.success) {
-    const err = result.error
-    console.log({
-      message: `Zod validation error`,
-      errors: err.errors,
-      issues: err.issues
-    })
-    return badRequest('invalid npm webhook event')
-  }
-
-  const validated = body as NpmWebhookEvent
-  // const validated = result.data; // stripped of those keys not declared in the schema
-  const { event, name, type, version, hookOwner } = validated
-
+  const { event, name, type, version, hookOwner } = webhook_event
   const username = hookOwner.username
-  const distTags = validated.payload['dist-tags']
-  const { author, description, keywords } = validated.payload
+  const distTags = webhook_event.payload['dist-tags']
+  const { author, description, keywords } = webhook_event.payload
 
   const obj = {
     event,
@@ -80,25 +62,38 @@ export const onRequestPost: PagesFunction<
     headers: ctx.request.headers
   }
 
-  const host = ctx.request.headers.get('host') || undefined
+  const host = ctx.request.headers.get('host')
 
-  const signature = ctx.request.headers.get('x-npm-signature') || undefined
-  if (!signature) {
-    return badRequest('missing npm hook signature')
+  let text = ''
+  switch (webhook_event.event) {
+    case 'package:change': {
+      text = text.concat(
+        `<b>${Emoji.Package} npm package <code>${webhook_event.name}</code> changed</b>`
+      )
+
+      text = text.concat('\n\n')
+      text = text.concat(
+        `<pre><code>${JSON.stringify(obj, null, 2)}</code></pre>`
+      )
+      break
+    }
+    default: {
+      text = text.concat(
+        `<b>${Emoji.Warning} received a webhook event not handled by this app</b>`
+      )
+
+      text = text.concat('\n\n')
+      text = text.concat(
+        `<pre><code>${JSON.stringify(obj, null, 2)}</code></pre>`
+      )
+    }
   }
 
-  // TODO: check that this header is correct. Otherwise return a HTTP 400.
-  // TODO: use zod to validate x-npm-signature
-  console.log(`npm hook signature is ${signature}`)
-
-  let text = `<b>${Emoji.Hook} npm.js hook ${event}</b>`
   text = text.concat('\n\n')
-  text = text.concat(`<pre><code>${JSON.stringify(obj, null, 2)}</code></pre>`)
+  text = text.concat(
+    `${Emoji.Hook} <i>event handled by ${host}</i> - ${verified_info}`
+  )
 
-  text = text.concat('\n\n')
-  text = text.concat(`${Emoji.Hook} <i>event handled by ${host}</i>`)
-
-  const telegram = ctx.data.telegram
   const { failures, successes, warnings } = await telegram.sendMessage(text)
 
   let data: object

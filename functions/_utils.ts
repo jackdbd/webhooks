@@ -19,6 +19,7 @@ export enum Emoji {
   Invalid = '❌',
   MoneyBag = '💰',
   Notification = '💬',
+  Package = '📦',
   ShoppingBags = '🛍️',
   Ok = '✅',
   Sparkles = '✨',
@@ -94,25 +95,18 @@ export const internalServerError = (details?: string) => {
 export const hmacKey = async (secret: string) => {
   const encoder = new TextEncoder()
   const keyData = encoder.encode(secret)
-  const algorithm = { name: 'HMAC', hash: 'SHA-256' }
   const extractable = false
   const keyUsages = ['sign', 'verify'] as KeyUsage[]
 
-  const cryptoKey = await crypto.subtle.importKey(
+  const key = await crypto.subtle.importKey(
     'raw',
     keyData,
-    algorithm,
+    { name: 'HMAC', hash: 'SHA-256' },
     extractable,
     keyUsages
   )
 
-  console.log(
-    `${PREFIX} HMAC SHA-256 created from secret ${secret} (this key can: ${keyUsages.join(
-      ', '
-    )})`
-  )
-
-  return cryptoKey
+  return key
 }
 
 export const hexStringToArrayBuffer = (hex: string) => {
@@ -121,5 +115,13 @@ export const hexStringToArrayBuffer = (hex: string) => {
     return new Uint8Array(match_arr.map((h) => parseInt(h, 16))).buffer
   } else {
     return new Uint8Array([]).buffer
+  }
+}
+
+export const defaultOrOptional = <T>(default_value: T, optional_value?: T) => {
+  if (optional_value !== undefined) {
+    return optional_value!
+  } else {
+    return default_value
   }
 }

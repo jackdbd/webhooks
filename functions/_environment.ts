@@ -1,6 +1,6 @@
 import type { Fetcher } from '@cloudflare/workers-types'
+import type { CalWebhookEvent } from '@jackdbd/cloudflare-pages-plugin-cal-com'
 import type { Client as TelegramClient } from '@jackdbd/cloudflare-pages-plugin-telegram'
-import type { CalWebhookEvent } from './_cal-com-webhooks-schemas.js'
 
 /**
  * Environment variables I defined for this Cloudflare Pages project.
@@ -10,6 +10,7 @@ import type { CalWebhookEvent } from './_cal-com-webhooks-schemas.js'
 export interface Env {
   ASSETS: Fetcher
   CAL_WEBHOOKS_SECRET?: string
+  NPM_WEBHOOK_SECRET?: string
   PASSWORD?: string
   STRIPE_API_KEY?: string
   STRIPE_WEBHOOK_SECRET?: string
