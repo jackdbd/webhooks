@@ -1,0 +1,16 @@
+{
+  "id": "evt_123",
+  "object": "event",
+  "api_version": "2022-11-15",
+  "created": 1685524116,
+  "data": {
+    "object": {
+      "id": "cus_456",
+      "object": "customer"
+    }
+  },
+  "livemode": false,
+  "pending_webhooks": 0,
+  "request": { "id": "req_789", "idempotency_key": "foo" },
+  "type": "customer.created"
+}

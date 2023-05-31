@@ -28,6 +28,13 @@ npm run make-dev-vars
 
 ### Stripe webhooks
 
+First of all, create a Stripe webhook endpoint for you Stripe account in **test** mode, and your Stripe account in **live** mode. Double check that you have created and enabled such endpoints:
+
+```sh
+stripe webhook_endpoints list --api-key $STRIPE_API_KEY_TEST
+stripe webhook_endpoints list --api-key $STRIPE_API_KEY_LIVE
+```
+
 In the **first terminal**, run this command, which watches all files using [wrangler](https://github.com/cloudflare/workers-sdk) and forwards all Stripe webhook events to `localhost:8788` using the [Stripe CLI](https://github.com/stripe/stripe-cli):
 
 ```sh
@@ -43,6 +50,59 @@ stripe trigger --api-key $STRIPE_API_KEY_TEST customer.created
 stripe trigger --api-key $STRIPE_API_KEY_TEST payment_intent.succeeded
 stripe trigger --api-key $STRIPE_API_KEY_TEST price.created
 stripe trigger --api-key $STRIPE_API_KEY_TEST product.created
+
+API_KEY=$(cat secrets/stripe-webhook-endpoint-live.json | jq '.api_key') && \
+SIGNING_SECRET=$(cat secrets/stripe-webhook-endpoint-live.json | jq '.signing_secret') &&
+echo "API key is ${API_KEY} and secret is ${SIGNING_SECRET}"
+
+stripe trigger --api-key $STRIPE_API_KEY_RESTRICTED customer.created
+```
+
+Or make some POST requests manually:
+
+POST to the test endpoint with invalid data:
+
+```sh
+curl "http://localhost:8788/stripe" \
+  -X POST \
+  -H "Content-Type: application/json" \
+  -d '{
+    "foo": "bar",
+    "baz": 123
+  }' | jq
+```
+
+POST to the test endpoint with valid data:
+
+```sh
+curl "http://localhost:8788/stripe" \
+  -X POST \
+  -H "Content-Type: application/json" \
+  -H "stripe-signature: foobar" \
+  -d "@./assets/webhook-events/stripe/customer-created.json" | jq
+```
+
+POST to the live endpoint with invalid data:
+
+```sh
+STRIPE_WEBHOOKS_ENDPOINT=$(
+  cat secrets/stripe-webhook-endpoint-live.json | jq '.url' | tr -d '"'
+) && \
+curl $STRIPE_WEBHOOKS_ENDPOINT \
+  -X POST \
+  -H "Content-Type: application/json" \
+  -d '{
+    "foo": "bar",
+    "baz": 123
+  }' | jq
+```
+
+Also, send a GET request to see list of all events that Stripe is allowed to send to this endpoint:
+
+```sh
+curl "http://localhost:8788/stripe" \
+  -X GET \
+  -H "Content-Type: application/json" | jq
 ```
 
 ### Instructions for all webhooks except the ones from Stripe
