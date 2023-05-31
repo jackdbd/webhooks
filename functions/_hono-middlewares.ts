@@ -1,26 +1,41 @@
-import type { Context, Env, Input, MiddlewareHandler } from 'hono'
+import type { Env, MiddlewareHandler } from 'hono'
+import { SafeParseReturnType } from 'zod'
+import { fromZodError } from 'zod-validation-error'
 import Stripe from 'stripe'
 import { makeClient, PREFIX } from './stripe/_utils.js'
 import type { Client } from './stripe/_utils.js'
-import { serviceUnavailable } from './_hono-utils.js'
+import { badRequest, serviceUnavailable } from './_hono-utils.js'
+import { post_request_body } from './stripe/_schemas.js'
+import type { StripeWebhookEvent } from './stripe/_schemas.js'
+
+export const eventIsIgnoredMessage = (event_type: string, url: string) =>
+  `This Stripe account is not configured to POST ${event_type} events to this endpoint [${url}] so the event is ignored.`
 
 interface StripeMiddlewareConfig {
   stripe_config: Stripe.StripeConfig
   webhook_endpoint?: string
 }
 
-interface Bindings {
-  STRIPE_API_KEY?: string
-  STRIPE_WEBHOOK_SECRET?: string
-  STRIPE_WEBHOOK_SKIP_VERIFICATION?: string
+// TODO: distinguish between stripe-signature verification and Stripe.Event schema validation
+interface Verification {
+  verified: boolean
+  message: string
 }
 
-export type ValidateWebhookEvent = (
-  ctx: Context
-) => Promise<
-  | { error: Error; value?: undefined }
-  | { error?: undefined; value: Stripe.Event }
->
+export interface Environment extends Env {
+  Bindings: {
+    eventContext: any
+    STRIPE_API_KEY?: string
+    STRIPE_WEBHOOK_SECRET?: string
+    STRIPE_WEBHOOK_SKIP_VERIFICATION?: string
+  }
+  Variables: {
+    stripeWebhookEndpoint: string
+    stripeWebhookEventsEnabled: string[]
+    stripeWebhookEventValidated: Stripe.Event
+    stripeWebhookEventVerification: Verification
+  }
+}
 
 const DEFAULT = {
   stripe_config: {
@@ -33,7 +48,7 @@ const DEFAULT = {
 
 export const stripeWebhooks = (
   options?: StripeMiddlewareConfig
-): MiddlewareHandler<Env, any> => {
+): MiddlewareHandler<Environment, any> => {
   const stripe_config = options?.stripe_config || DEFAULT.stripe_config
   console.log({ message: `${PREFIX} Stripe config`, ...stripe_config })
 
@@ -43,15 +58,9 @@ export const stripeWebhooks = (
     let api_key: string | undefined = undefined
     let secret: string | undefined = undefined
 
-    // console.log({
-    //   message: `${PREFIX} ctx.env.eventContext`,
-    //   ctx_env_eventContext: (ctx.env as any).eventContext
-    // })
-
     if (ctx.env) {
-      const b = ctx.env as Bindings
-      api_key = b.STRIPE_API_KEY
-      secret = b.STRIPE_WEBHOOK_SECRET
+      api_key = ctx.env.STRIPE_API_KEY
+      secret = ctx.env.STRIPE_WEBHOOK_SECRET
     }
 
     if (!api_key) {
@@ -68,15 +77,13 @@ export const stripeWebhooks = (
     const user_agent = ctx.req.headers.get('user-agent')
     // const real_ip = ctx.req.headers.get('x-real-ip')
     // const forwarded_for = ctx.req.headers.get('x-forwarded-for')
-    // const request_path = ctx.req.path
+
     console.log({
-      message: `debugging a few request headers`,
+      message: `${PREFIX} debugging a few request headers`,
       host,
       user_agent
     })
 
-    // Error: this context has no fetch event
-    // const endpoint = ctx.event.request.url
     // TODO: decide how to make it configurable (e.g. `path` in the middleware
     // options? Can I extract it from the Hono ctx somehow?)
     const functionPath = (ctx.env as any).eventContext.functionPath as string
@@ -94,31 +101,94 @@ export const stripeWebhooks = (
     if (!client) {
       const stripe = new Stripe(api_key, stripe_config)
       client = makeClient({ stripe, endpoint, secret })
-      console.log({ message: `${PREFIX} Stripe webhooks client initialized` })
     }
 
-    let events: string[] = []
-    try {
-      events = await client.enabledWebhookEvents()
-    } catch (err: any) {
-      return serviceUnavailable(ctx, err.message)
+    const {
+      error,
+      value: events,
+      warnings
+    } = await client.enabledWebhookEvents()
+    if (error) {
+      console.log({
+        message: `${PREFIX} ${error.message}`,
+        warnings
+      })
+      return serviceUnavailable(ctx)
     }
 
-    ;(ctx.req as any).stripeWebhookEndpoint = endpoint
-    console.log({ message: `${PREFIX} added stripeWebhookEndpoint to ctx.req` })
-    // or maybe this?
-    // (ctx.env as any).eventContext.data.stripeWebhookEndpoint = stripeWebhookEndpoint
-    //
-    ;(ctx.req as any).stripeWebhookEventsEnabled = events
+    ctx.set('stripeWebhookEndpoint', endpoint)
     console.log({
-      message: `${PREFIX} added stripeWebhookEventsEnabled to ctx.req`
+      message: `${PREFIX} stripeWebhookEndpoint set in request context`
     })
 
-    // TODO: do this here if the incoming request is a POST, so the handler already has the validated Stripe webhook event
-    ;(ctx.req as any).validateWebhookEvent = client.validateWebhookEvent
+    ctx.set('stripeWebhookEventsEnabled', events)
     console.log({
-      message: `${PREFIX} added validateWebhookEvent to ctx.req`
+      message: `${PREFIX} stripeWebhookEventsEnabled set in request context`
     })
+
+    if (ctx.req.method === 'POST') {
+      let verification: Verification
+      if (ctx.env.STRIPE_WEBHOOK_SKIP_VERIFICATION === 'true') {
+        verification = { verified: false, message: `signature NOT verified` }
+      } else {
+        verification = { verified: true, message: `signature verified` }
+      }
+
+      let event: Stripe.Event | undefined = undefined
+      if (verification.verified) {
+        console.log({ message: `${PREFIX}: verify request signature` })
+        const { error, value } = await client.validateWebhookEvent(ctx)
+        if (error) {
+          console.log({
+            message: `${PREFIX}: request signature verification failed: ${error.message}`
+          })
+          return badRequest(ctx)
+        } else {
+          console.log({ message: `${PREFIX}: request signature verified` })
+          event = value
+        }
+      } else {
+        console.warn({
+          message: `${PREFIX} skip request signature verification because environment variable STRIPE_WEBHOOK_SKIP_VERIFICATION is set to true`
+        })
+      }
+
+      let result: SafeParseReturnType<any, StripeWebhookEvent>
+
+      if (event) {
+        console.log({ message: `${PREFIX} validate schema of 'event'` })
+        result = post_request_body.safeParse(event)
+      } else {
+        console.log({ message: `${PREFIX} validate schema of 'ctx.req.body'` })
+        const req_payload = await ctx.req.arrayBuffer()
+        const decoder = new TextDecoder('utf-8')
+        const req_body: Stripe.Event = JSON.parse(decoder.decode(req_payload))
+        result = post_request_body.safeParse(req_body)
+      }
+
+      if (!result.success) {
+        const err = fromZodError(result.error)
+        console.log({
+          message: `${PREFIX}: ${err.message}`
+          // errors: JSON.stringify(result.error.errors, null, 2),
+          // issues: JSON.stringify(result.error.issues, null, 2)
+        })
+        return badRequest(ctx)
+      } else {
+        console.log({ message: `${PREFIX}: schema validated` })
+      }
+
+      if (!events.includes(result.data.type)) {
+        const message = `Received a Stripe ${result.data.type} event. Since your Stripe account is not configured to send this type of events to this endpoint (${endpoint}), the event is ignored.`
+        return badRequest(ctx, `Bad Request: ${message}`)
+      }
+
+      ctx.set('stripeWebhookEventValidated', result.data)
+      ctx.set('stripeWebhookEventVerification', verification)
+      console.log({
+        message: `${PREFIX} stripeWebhookEventValidated set in request context`
+      })
+    }
 
     // READ THIS!
     // https://community.cloudflare.com/t/wrangler-with-stripe-error/447825/2

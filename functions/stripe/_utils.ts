@@ -1,5 +1,6 @@
-import { Context, Env } from 'hono'
+import { Context, Env, Input } from 'hono'
 import Stripe from 'stripe'
+import { Environment } from '../_hono-middlewares.js'
 
 export enum Emoji {
   Fire = '🔥'
@@ -13,7 +14,14 @@ export interface Config {
   secret: string
 }
 
-export type EnabledWebhookEvents = () => Promise<string[]>
+export type EnabledWebhookEvents = () => Promise<
+  | {
+      error: Error
+      value?: undefined
+      warnings?: undefined
+    }
+  | { error: undefined; value: string[]; warnings: string[] }
+>
 
 export const makeEnabledWebhookEvents = (
   config: Config
@@ -25,22 +33,37 @@ export const makeEnabledWebhookEvents = (
   })
 
   return async function enabledWebhookEvents() {
-    const we_all = await stripe.webhookEndpoints.list()
+    let we_all: Stripe.ApiList<Stripe.WebhookEndpoint>
+    try {
+      we_all = await stripe.webhookEndpoints.list()
+    } catch (err: any) {
+      return {
+        error: new Error(
+          `${PREFIX}: could not retrieve list of webhook endpoints: ${err.message}`
+        )
+      }
+    }
+
     const we_matching_url = we_all.data.filter((d) => d.url === endpoint)
 
     if (we_matching_url.length === 0) {
-      const arr = [
-        `${endpoint} is not among the ${we_all.data.length} webhook endpoints that your Stripe account is allowed to send events to.`,
-        `Maybe you initialized this middleware using a Stripe client in TEST mode and the webhook endpoint in Stripe LIVE, or vice versa?`
-      ]
-      throw new Error(arr.join(' '))
+      return {
+        value: [] as string[],
+        warnings: [
+          `${endpoint} is not among the ${we_all.data.length} webhook endpoints that your Stripe account is allowed to send events to. Maybe you initialized this middleware using a Stripe client in TEST mode and the webhook endpoint in Stripe LIVE, or vice versa?`
+        ]
+      }
     } else {
-      return we_matching_url[0].enabled_events
+      return { value: we_matching_url[0].enabled_events, warnings: [] }
     }
   }
 }
 
-export type ValidateWebhookEvent = (ctx: Context<Env, string, {}>) => Promise<
+export type ValidateWebhookEvent<
+  E extends Env = Environment,
+  P extends string = any,
+  I extends Input = {}
+> = (ctx: Context<E, P, I>) => Promise<
   | {
       error: Error
       value?: undefined
@@ -65,7 +88,7 @@ export const makeValidateWebhookEvent = (
       const message = `request lacks required header: stripe-signature`
 
       console.log({
-        message: `${PREFIX}:${message} `,
+        message: `${PREFIX}: ${message} `,
         required_header: 'stripe-signature',
         headers: ctx.req.headers
       })
@@ -84,7 +107,7 @@ export const makeValidateWebhookEvent = (
       const message = `could not read raw request body`
 
       console.log({
-        message: `${PREFIX}:${message} `,
+        message: `${PREFIX}: ${message} `,
         original_error_message: err.message
       })
 
@@ -110,7 +133,7 @@ export const makeValidateWebhookEvent = (
       const message = `could not construct webhook event`
 
       console.log({
-        message: `${PREFIX}:${message} `,
+        message: `${PREFIX}: ${message} `,
         original_error_message: err.message
       })
 
@@ -119,9 +142,13 @@ export const makeValidateWebhookEvent = (
   }
 }
 
-export type Client = {
+export type Client<
+  E extends Env = Environment,
+  P extends string = any,
+  I extends Input = {}
+> = {
   enabledWebhookEvents: EnabledWebhookEvents
-  validateWebhookEvent: ValidateWebhookEvent
+  validateWebhookEvent: ValidateWebhookEvent<E, P, I>
 }
 
 export const makeClient = (config: Config) => {
