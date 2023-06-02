@@ -4,7 +4,7 @@ import { head, body } from '../_html.js'
 import { Emoji } from '../_utils.js'
 import type { NpmWebhookEvent } from './_schemas.js'
 
-export const onRequestGet = (_ctx: AppEventContext) => {
+export const onRequestGet = async (ctx: AppEventContext) => {
   const title = `How to list your npm hooks`
 
   const instructions = `
