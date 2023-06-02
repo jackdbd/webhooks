@@ -60,7 +60,7 @@ stripe trigger --api-key $STRIPE_API_KEY_RESTRICTED customer.created
 
 Or make some POST requests manually:
 
-POST to the test endpoint with invalid data:
+POST to the test endpoint without required header and invalid data:
 
 ```sh
 curl "http://localhost:8788/stripe" \
@@ -72,7 +72,20 @@ curl "http://localhost:8788/stripe" \
   }' | jq
 ```
 
-POST to the test endpoint with valid data:
+POST to the test endpoint with the required header but invalid data:
+
+```sh
+curl "http://localhost:8788/stripe" \
+  -X POST \
+  -H "Content-Type: application/json" \
+  -H "stripe-signature: foobar" \
+  -d '{
+    "foo": "bar",
+    "baz": 123
+  }' | jq
+```
+
+POST to the test endpoint with the required header and valid data:
 
 ```sh
 curl "http://localhost:8788/stripe" \
@@ -146,7 +159,7 @@ curl "$WEBHOOKS_URL/cal" \
   -X POST \
   -H "Content-Type: application/json" \
   -H "X-Cal-Signature-256: hex-string-sent-by-cal.com" \
-  -d "@./assets/webhook-events/cal/booking-created.json"
+  -d "@./assets/webhook-events/cal/booking-created.json" | jq
 ```
 
 Reschedule a booking:
@@ -156,7 +169,7 @@ curl "$WEBHOOKS_URL/cal" \
   -X POST \
   -H "Content-Type: application/json" \
   -H "X-Cal-Signature-256: hex-string-sent-by-cal.com" \
-  -d "@./assets/webhook-events/cal/booking-rescheduled.json"
+  -d "@./assets/webhook-events/cal/booking-rescheduled.json" | jq
 ```
 
 Cancel a booking:
@@ -166,7 +179,7 @@ curl "$WEBHOOKS_URL/cal" \
   -X POST \
   -H "Content-Type: application/json" \
   -H "X-Cal-Signature-256: hex-string-sent-by-cal.com" \
-  -d "@./assets/webhook-events/cal/booking-cancelled.json"
+  -d "@./assets/webhook-events/cal/booking-cancelled.json" | jq
 ```
 
 Event sent by cal.com when a meeting ends:
@@ -176,7 +189,7 @@ curl "$WEBHOOKS_URL/cal" \
   -X POST \
   -H "Content-Type: application/json" \
   -H "X-Cal-Signature-256: hex-string-sent-by-cal.com" \
-  -d "@./assets/webhook-events/cal/meeting-ended.json"
+  -d "@./assets/webhook-events/cal/meeting-ended.json" | jq
 ```
 
 ### Cloud Monitoring webhooks
@@ -184,10 +197,38 @@ curl "$WEBHOOKS_URL/cal" \
 See the [documentation on Cloud Monitoring](https://cloud.google.com/monitoring/support/notification-options#webhooks).
 
 ```sh
+curl "http://localhost:8788/monitoring" \
+  -X POST \
+  -H "Content-Type: application/json" \
+  -d '{"foo": 123, "bar": 456}' | jq
+```
+
+```sh
+curl "http://localhost:8788/monitoring" \
+  -X POST \
+  -H "Content-Type: application/json" \
+  -d '{"foo": 123, "bar": 456}' | jq
+```
+
+```sh
+curl "http://localhost:8788/monitoring" \
+  -X POST \
+  -H "Content-Type: application/json" \
+  -d "@./assets/webhook-events/cloud-monitoring/incident-created.json" | jq
+```
+
+```sh
 curl "$WEBHOOKS_URL/monitoring" \
   -X POST \
   -H "Content-Type: application/json" \
-  -d "@./assets/webhook-events/cloud-monitoring/incident-created.json"
+  -d '{"foo": 123, "bar": 456}' | jq
+```
+
+```sh
+curl "$WEBHOOKS_URL/monitoring" \
+  -X POST \
+  -H "Content-Type: application/json" \
+  -d "@./assets/webhook-events/cloud-monitoring/incident-created.json" | jq
 ```
 
 ### npm.js webhooks
@@ -198,8 +239,15 @@ See the [documentation on npm.js](https://docs.npmjs.com/cli/v9/commands/npm-hoo
 curl "$WEBHOOKS_URL/npm" \
   -X POST \
   -H "Content-Type: application/json" \
+  -d '{"foo": 123, "bar": 456}' | jq
+```
+
+```sh
+curl "$WEBHOOKS_URL/npm" \
+  -X POST \
+  -H "Content-Type: application/json" \
   -H "x-npm-signature: hex-string-sent-by-npm.js" \
-  -d "@./assets/webhook-events/npm/package-changed.json"
+  -d "@./assets/webhook-events/npm/package-changed.json" | jq
 ```
 
 ### WebPageTest pingbacks

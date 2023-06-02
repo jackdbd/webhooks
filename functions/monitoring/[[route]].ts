@@ -1,73 +1,134 @@
-import { Hono } from "hono";
-import { zValidator } from "@hono/zod-validator";
-import { operationListText } from "@jackdbd/telegram-text-messages";
-import { handle } from "hono/cloudflare-pages";
-import { logger } from "hono/logger";
-import { prettyJSON } from "hono/pretty-json";
-import type { AppEventContext } from "../_environment.js";
-import { notFound, onError } from "../_hono-handlers.js";
-import { Emoji } from "../_utils.js";
-import { post_request_body } from "./_schemas.js";
+import { Hono } from 'hono'
+import type { Env } from 'hono'
+import { handle } from 'hono/cloudflare-pages'
+import { logger } from 'hono/logger'
+import { prettyJSON } from 'hono/pretty-json'
+import { zValidator } from '@hono/zod-validator'
+import type { AppEventContext } from '../_environment.js'
+import { notFound, onError } from '../_hono-handlers.js'
+import { Emoji } from '../_utils.js'
+import { post_request_body, type MonitoringWebhookEvent } from './_schemas.js'
+import { fromZodError } from 'zod-validation-error'
+import { badRequest } from '../_hono-utils.js'
 
-const app = new Hono().basePath("/monitoring");
-app.use("*", logger());
-app.use("*", prettyJSON());
-
-app.notFound(notFound);
-app.onError(onError);
-
-app.post("/", zValidator("json", post_request_body), async (ctx) => {
-  if (!ctx.env) {
-    throw new Error(`ctx.env is not defined`);
+interface Environment extends Env {
+  Bindings: {
+    eventContext: any
+    MONITORING_WEBHOOK_SECRET: string
   }
+  Variables: {
+    'webhook-verification-message': string
+  }
+}
 
-  const validated = ctx.req.valid("json");
+const app = new Hono<Environment>().basePath('/monitoring')
+app.use('*', logger())
+app.use('*', prettyJSON())
 
-  const incident_summary = validated.incident.summary;
-  const incident_url = validated.incident.url;
-  const policy_name = validated.incident.policy_name;
-  const condition_name = validated.incident.condition_name;
+app.notFound(notFound)
+app.onError(onError)
 
-  const telegram = (ctx.env.eventContext as AppEventContext).data.telegram;
+app.post(
+  '/',
+  zValidator('json', post_request_body, (result, ctx) => {
+    if (!result.success) {
+      const err = fromZodError(result.error)
+      const cf_ray = ctx.req.headers.get('CF-Ray')
 
-  const successes: string[] = [];
-  const failures: string[] = [];
-  const warnings: string[] = [];
-  warnings.push(incident_summary);
+      console.log({
+        cf_ray,
+        message: err.message,
+        timestamp: new Date().getTime()
+      })
 
-  const text = operationListText({
-    app_name: `${Emoji.Hook} ${Emoji.ChartDecreasing} webhooks`,
-    app_version: "0.0.1",
-    description: `the alerting policy ${policy_name} was triggered because the condition ${condition_name} failed. See <a href="${incident_url}" target="_blank">incident here</a>.`,
-    operations: [
-      {
+      // const should_notify_when_bad_request = true
+      const should_notify_when_bad_request = false
+
+      if (should_notify_when_bad_request) {
+        const telegram = (ctx.env.eventContext as AppEventContext).data.telegram
+
+        ctx.req
+          .text()
+          .then((req_body) => {
+            let text = `<b>${err.name} at <code>${ctx.req.path}</code></b>`
+
+            text = text.concat('\n\n')
+            text = text.concat('<b>Request body</b>')
+            text = text.concat('\n')
+            text = text.concat(`<pre><code>${req_body}</code></pre>`)
+
+            text = text.concat('\n\n')
+            text = text.concat('<b>Details</b>')
+            const s = JSON.stringify(err.details, null, 2)
+            text = text.concat(`<pre><code>${s}</code></pre>`)
+
+            return text
+          })
+          .then((text) => {
+            telegram.sendMessage(text)
+          })
+          .catch(console.error)
+      }
+
+      return badRequest(ctx)
+    }
+  }),
+  async (ctx) => {
+    if (!ctx.env) {
+      throw new Error(`ctx.env is not defined`)
+    }
+
+    const host = ctx.req.headers.get('host')
+
+    const event: MonitoringWebhookEvent = ctx.req.valid('json')
+
+    const webhook_verification_message =
+      ctx.get('webhook-verification-message') || 'webhook not verified'
+
+    const incident_summary = event.incident.summary
+    const incident_url = event.incident.url
+    const policy_name = event.incident.policy_name
+    const condition_name = event.incident.condition_name
+
+    const telegram = (ctx.env.eventContext as AppEventContext).data.telegram
+
+    let text = '<b>Cloud Monitoring webhook event</b>'
+
+    text = text.concat('\n\n')
+    text = text.concat(
+      `${Emoji.ChartDecreasing} Alerting Policy: <code>${policy_name}</code>`
+    )
+    text = text.concat('\n\n')
+    text = text.concat(
+      `The alerting policy was triggered because the condition ${condition_name} failed. See <a href="${incident_url}">incident here</a>.`
+    )
+
+    text = text.concat('\n\n')
+    text = text.concat(`<b>Incident summary</b>`)
+    text = text.concat('\n')
+    text = text.concat(incident_summary)
+
+    text = text.concat('\n\n')
+    text = text.concat(
+      `${Emoji.Hook} <i>${webhook_verification_message}</i> - <i>webhook event processed by ${host}</i>`
+    )
+
+    const { successes, failures, warnings } = await telegram.sendMessage(text)
+
+    if (failures.length === 0) {
+      return ctx.json({
+        message: `Cloud Monitoring webhook event processed successfully`,
         successes,
+        warnings
+      })
+    } else {
+      return ctx.json({
+        message: `failed to process Cloud Monitoring webhook event`,
         failures,
-        warnings,
-        title: `Alerting policy: ${policy_name}`,
-      },
-    ],
-  });
-
-  const result = await telegram.sendMessage(text);
-
-  result.failures.forEach((x) => failures.push(x));
-  result.successes.forEach((x) => successes.push(x));
-  result.warnings.forEach((x) => warnings.push(x));
-
-  if (failures.length === 0) {
-    return ctx.json({
-      message: `Cloud Monitoring webhook event processed successfully`,
-      successes,
-      warnings,
-    });
-  } else {
-    return ctx.json({
-      message: `failed to process Cloud Monitoring webhook event`,
-      failures,
-      warnings,
-    });
+        warnings
+      })
+    }
   }
-});
+)
 
-export const onRequestPost = handle(app);
+export const onRequestPost = handle(app)

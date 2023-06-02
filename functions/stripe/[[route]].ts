@@ -9,7 +9,9 @@ import { Emoji } from '../_utils.js'
 import { notFound, onError } from '../_hono-handlers.js'
 import { stripeWebhooks } from '../_hono-middlewares.js'
 import type { Environment } from '../_hono-middlewares.js'
+// import { webhooksMiddleware } from '../_hono-webhooks-middleware/_middleware.js'
 import { PREFIX } from './_utils.js'
+// import { post_request_body } from './_schemas.js'
 
 interface TextDetailsConfig {
   event: Stripe.Event
@@ -42,6 +44,14 @@ const app = new Hono<Environment>().basePath('/stripe')
 app.use('*', logger())
 app.use('*', prettyJSON())
 app.use('*', stripeWebhooks())
+// app.use(
+//   '*',
+//   webhooksMiddleware({
+//     header: 'stripe-signature',
+//     env_var: 'STRIPE_WEBHOOK_SECRET',
+//     schema: post_request_body
+//   })
+// )
 
 app.notFound(notFound)
 app.onError(onError)
@@ -90,7 +100,8 @@ app.post('/', async (ctx) => {
   const telegram = (ctx.env.eventContext as AppEventContext).data.telegram
 
   const event = ctx.req.valid('json') as Stripe.Event
-  const verification = ctx.get('stripeWebhookEventVerification')
+  const webhook_verification_message = ctx.get('webhook-verification-message')
+  // const verification = ctx.get('stripeWebhookEventVerification')
 
   const host = ctx.req.headers.get('host')
 
@@ -226,8 +237,11 @@ app.post('/', async (ctx) => {
   }
 
   text = text.concat('\n\n')
+  // text = text.concat(
+  //   `${Emoji.Hook} <i>${verification.message}</i> - <i>event handled by ${host}</i>`
+  // )
   text = text.concat(
-    `${Emoji.Hook} <i>${verification.message}</i> - <i>event handled by ${host}</i>`
+    `${Emoji.Hook} <i>${webhook_verification_message}</i> - <i>webhook event processed by ${host}</i>`
   )
 
   const { failures, successes, warnings } = await telegram.sendMessage(text)

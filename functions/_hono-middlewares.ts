@@ -33,6 +33,7 @@ export interface Environment extends Env {
     stripeWebhookEndpoint: string
     stripeWebhookEventsEnabled: string[]
     stripeWebhookEventVerification: Verification
+    'webhook-verification-message': string
   }
 }
 
