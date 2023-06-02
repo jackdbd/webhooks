@@ -32,7 +32,6 @@ export interface Environment extends Env {
   Variables: {
     stripeWebhookEndpoint: string
     stripeWebhookEventsEnabled: string[]
-    stripeWebhookEventValidated: Stripe.Event
     stripeWebhookEventVerification: Verification
   }
 }
@@ -183,10 +182,12 @@ export const stripeWebhooks = (
         return badRequest(ctx, `Bad Request: ${message}`)
       }
 
-      ctx.set('stripeWebhookEventValidated', result.data)
+      ctx.req.addValidatedData('json', result.data)
+      console.log({ message: `${PREFIX} added validated 'json' data` })
+
       ctx.set('stripeWebhookEventVerification', verification)
       console.log({
-        message: `${PREFIX} stripeWebhookEventValidated set in request context`
+        message: `${PREFIX} stripeWebhookEventVerification set in request context`
       })
     }
 

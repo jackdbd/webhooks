@@ -89,7 +89,7 @@ app.get('/', async (ctx) => {
 app.post('/', async (ctx) => {
   const telegram = (ctx.env.eventContext as AppEventContext).data.telegram
 
-  const event = ctx.get('stripeWebhookEventValidated')
+  const event = ctx.req.valid('json') as Stripe.Event
   const verification = ctx.get('stripeWebhookEventVerification')
 
   const host = ctx.req.headers.get('host')
