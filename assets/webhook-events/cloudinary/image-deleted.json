@@ -1,0 +1,19 @@
+{
+  "notification_type": "delete",
+  "resources": [
+    {
+      "resource_type": "image",
+      "type": "upload",
+      "asset_id": "71c80fc5649a6f1f75a2a25242a1b619",
+      "public_id": "kbwtr9kcadzuj2dcwebc",
+      "version": 1685815655
+    }
+  ],
+  "notification_context": {
+    "triggered_at": "2023-06-03T21:32:02.988895Z",
+    "triggered_by": {
+      "source": "ui",
+      "id": "jackdebidda@gmail.com"
+    }
+  }
+}

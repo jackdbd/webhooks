@@ -1,12 +1,15 @@
 // https://emojipedia.org/
 export enum Emoji {
+  ArrowUp = '⬆️',
   ChartDecreasing = '📉',
+  Coffin = '⚰️',
   Coin = '🪙',
   CreditCard = '💳',
   Customer = '👤',
   DollarBanknote = '💵',
   Error = '🚨',
   Failure = '❌',
+  Headstone = '🪦',
   Hook = '🪝',
   Inspect = '🔍',
   Invalid = '❌',

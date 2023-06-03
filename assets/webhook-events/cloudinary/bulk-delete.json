@@ -1,0 +1,40 @@
+{
+  "notification_type": "delete",
+  "resources": [
+    {
+      "resource_type": "image",
+      "type": "upload",
+      "asset_id": "06c822e86d81a4263e73735ec8b60c3f",
+      "public_id": "csbsy1gedwzdqad42zvy",
+      "version": 1685822411
+    },
+    {
+      "resource_type": "image",
+      "type": "upload",
+      "asset_id": "1340bd0ea358f777dfc08743554ef6cb",
+      "public_id": "pvf2vvzwmdevthrvjytq",
+      "version": 1685823690
+    },
+    {
+      "resource_type": "image",
+      "type": "upload",
+      "asset_id": "761bb7b9cefeb20d90a99f8929a5176a",
+      "public_id": "btqd1mdjcjlgekz3awgo",
+      "version": 1685826817
+    },
+    {
+      "resource_type": "image",
+      "type": "upload",
+      "asset_id": "77d3751e655741139b89d35de3db8263",
+      "public_id": "f9siudnton73gohaji0j",
+      "version": 1685827872
+    }
+  ],
+  "notification_context": {
+    "triggered_at": "2023-06-03T21:32:23.014586Z",
+    "triggered_by": {
+      "source": "ui",
+      "id": "jackdebidda@gmail.com"
+    }
+  }
+}
