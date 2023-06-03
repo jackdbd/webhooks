@@ -1,133 +1,137 @@
-import type { Env, MiddlewareHandler } from 'hono'
-// import { type EventContext } from 'hono/cloudflare-pages'
-import { ZodObject } from 'zod'
-import {
-  type AuditEntry,
-  badRequest,
-  default_schema,
-  defaultOrOptional,
-  type DefaultWebhook,
-  makeVerifyWebhook,
-  PREFIX,
-  serviceUnavailable
-} from './_utils.js'
+import type { Env, Input, MiddlewareHandler } from 'hono'
+import { fromZodError } from 'zod-validation-error'
+import { badRequest, serviceUnavailable } from './_responses.js'
+import { config as config_schema } from './_schemas.js'
+import type { Config } from './_schemas.js'
+import { type AuditEntry, makeVerifyWebhook } from './_verify.js'
 
-export interface Config<T extends DefaultWebhook = DefaultWebhook> {
-  env_var: string
-  header: string
-  schema?: ZodObject<T>
-  verification_message_var: string
+export interface AuditTrail {
+  summary: string
+  entries: AuditEntry[]
 }
 
-export const DEFAULT: Partial<Config> = {
-  schema: default_schema
-}
+export const webhooksMiddleware = <
+  E extends Env = Env,
+  P extends string = any,
+  I extends Input = {}
+>(
+  options: Config
+): MiddlewareHandler<E, P, I> => {
+  const result = config_schema.safeParse(options)
 
-// TODO: make this a configurable sink
-const logAuditTrail = (audit_trail: AuditEntry[]) => {
-  console.log(`${PREFIX} audit trail`)
-  audit_trail.forEach((d) => {
-    console.log(d)
-  })
-}
+  if (!result.success) {
+    const error = fromZodError(result.error)
+    const message = config_schema.description
+      ? `${config_schema.description} does not conform to the schema: ${error.message}`
+      : `invalid configuration: ${error.message}`
 
-export const webhooksMiddleware = <E extends Env = Env>(
-  config: Config
-): MiddlewareHandler<E> => {
-  if (!config) {
-    throw new Error(`${PREFIX} config not set`)
+    throw new Error(message)
   }
 
-  if (!config.header) {
-    throw new Error(`${PREFIX} header not set`)
-  }
+  const config = result.data
+
   const header = config.header
+  const env_var = config.secret
+  const debug_key = config.debug_key
+  const schema = config.schema
 
-  if (!config.env_var) {
-    throw new Error(`${PREFIX} env_var not set`)
-  }
-  const env_var = config.env_var
+  const clientErrorResponse = config.clientErrorResponse || badRequest
+  const serverErrorResponse = config.serverErrorResponse || serviceUnavailable
 
-  const schema = defaultOrOptional(DEFAULT.schema, config.schema)
-  if (!schema) {
-    throw new Error(`${PREFIX} schema not set`)
-  }
-
-  if (!config.verification_message_var) {
-    throw new Error(`${PREFIX} verification_message_var not set`)
-  }
-  const verification_message_var = config.verification_message_var
+  const beforeClientErrorResponse = config.beforeClientErrorResponse
+  const beforeServerErrorResponse = config.beforeServerErrorResponse
 
   return async (ctx, next) => {
     if (ctx.req.method !== 'POST') {
       return await next()
     }
 
-    const audit_trail: AuditEntry[] = []
+    const host = ctx.req.headers.get('host')
+    const received_at = host ? `${host}${ctx.req.path}` : ctx.req.path
+
+    const audit_trail: AuditTrail = {
+      summary: `webhook verification at ${received_at} failed`,
+      entries: []
+    }
+
+    // Immediately store the audit_trail object in the request context, so all
+    // donwstream middlewares and route handlers will be able to access it, even
+    // when there is an error in this middleware.
+    // The audit_trail object is MUTATED IN PLACE.
+    ctx.set(debug_key as any, audit_trail)
 
     const cf_ray = ctx.req.headers.get('CF-Ray')
     if (!cf_ray) {
-      audit_trail.push({
+      audit_trail.entries.push({
         cf_ray: 'not-set',
         message: `request has no CF-Ray header`,
         timestamp: new Date().getTime()
       })
-      logAuditTrail(audit_trail)
-      return serviceUnavailable(ctx)
+
+      if (beforeServerErrorResponse) {
+        await beforeServerErrorResponse(ctx)
+      }
+
+      return serverErrorResponse(ctx)
     }
 
     if (!ctx.env) {
-      audit_trail.push({
+      audit_trail.entries.push({
         cf_ray,
         message: `request has no environment variables available in its context`,
         timestamp: new Date().getTime()
       })
-      logAuditTrail(audit_trail)
-      return serviceUnavailable(ctx)
+
+      if (beforeServerErrorResponse) {
+        await beforeServerErrorResponse(ctx)
+      }
+
+      return serverErrorResponse(ctx)
     }
 
     // const ec = ctx.env.eventContext as EventContext<E>
     // const functionPath = ec.functionPath
-    // console.log(
-    //   `ctx.env.eventContext.functionPath`,
-    //   functionPath,
-    //   `ctx.req.path`,
-    //   ctx.req.path
-    // )
 
     const secret = ctx.env[env_var] as string | undefined
     if (!secret) {
-      audit_trail.push({
+      audit_trail.entries.push({
         cf_ray,
         message: `environment variable ${env_var} not available in this request context`,
         timestamp: new Date().getTime()
       })
-      logAuditTrail(audit_trail)
-      return serviceUnavailable(ctx)
+
+      if (beforeServerErrorResponse) {
+        await beforeServerErrorResponse(ctx)
+      }
+
+      return serverErrorResponse(ctx)
     }
 
-    const verifyWebhook = makeVerifyWebhook<E>({
+    const verifyWebhook = makeVerifyWebhook({
       header,
       secret,
-      schema,
-      verification_message_var
+      schema
     })
 
-    const { audit_trail: audits, error, is_server } = await verifyWebhook(ctx)
-
-    audits.forEach((d) => audit_trail.push(d))
+    const { audit_entries, error, is_server } = await verifyWebhook(ctx)
+    audit_entries.forEach((d) => audit_trail.entries.push(d))
 
     if (error) {
       if (is_server) {
-        logAuditTrail(audit_trail)
-        return serviceUnavailable(ctx)
+        if (beforeServerErrorResponse) {
+          await beforeServerErrorResponse(ctx)
+        }
+        return serverErrorResponse(ctx)
       } else {
-        logAuditTrail(audit_trail)
-        return badRequest(ctx)
+        if (beforeClientErrorResponse) {
+          await beforeClientErrorResponse(ctx)
+        }
+        return clientErrorResponse(ctx)
       }
     }
 
-    logAuditTrail(audit_trail)
+    audit_trail.summary = `webhook verification at ${received_at} succeeded`
+
     return await next()
   }
 }
