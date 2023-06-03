@@ -8,6 +8,7 @@ import type { Client as TelegramClient } from '@jackdbd/cloudflare-pages-plugin-
  * @see https://developers.cloudflare.com/pages/platform/build-configuration/#environment-variables
  */
 export enum EnvVarsEnum {
+  ApiKeyForCloudinary = 'CLOUDINARY_API_KEY',
   ApiKeyForStripe = 'STRIPE_API_KEY',
   Password = 'PASSWORD',
   SecretForCalComWebhooks = 'CAL_WEBHOOK_SECRET',

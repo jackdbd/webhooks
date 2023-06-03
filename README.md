@@ -231,7 +231,7 @@ curl "http://localhost:8788/cloudinary" \
   -X POST \
   -H "Content-Type: application/json" \
   -H "X-Cld-Signature: signature-sent-by-cloudinary" \
-  -H "X-Cld-Timestamp: timestamp-sent-by-cloudinary" \
+  -H "X-Cld-Timestamp: 1685819601" \
   -d '{"foo": 123, "bar": 456}' | jq
 ```
 
@@ -242,7 +242,7 @@ curl "http://localhost:8788/cloudinary" \
   -X POST \
   -H "Content-Type: application/json" \
   -H "X-Cld-Signature: signature-sent-by-cloudinary" \
-  -H "X-Cld-Timestamp: timestamp-sent-by-cloudinary" \
+  -H "X-Cld-Timestamp: 1685819601" \
   -d "@./assets/webhook-events/cloudinary/image-uploaded.json" | jq
 ```
 
@@ -251,7 +251,7 @@ curl "$WEBHOOKS_URL/cloudinary" \
   -X POST \
   -H "Content-Type: application/json" \
   -H "X-Cld-Signature: signature-sent-by-cloudinary" \
-  -H "X-Cld-Timestamp: timestamp-sent-by-cloudinary" \
+  -H "X-Cld-Timestamp: 1685819601" \
   -d "@./assets/webhook-events/cloudinary/image-uploaded.json" | jq
 ```
 
