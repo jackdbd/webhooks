@@ -94,6 +94,12 @@ export const makeVerifyWebhook = <
 
     let payload: ArrayBuffer
     try {
+      // TODO: this MUST be configurable, because the payload to verify varies
+      // across 3rd party services. A few examples:
+      // Cloudinary's payload is body+timestamp+secret
+      // https://cloudinary.com/documentation/notifications#verifying_notification_signatures
+      // Stripe's payload seems even more complex
+      // https://github.com/stripe/stripe-node/blob/master/src/Webhooks.ts
       payload = await ctx.req.arrayBuffer()
     } catch (err: any) {
       const message = `could not read raw request body`

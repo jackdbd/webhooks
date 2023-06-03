@@ -211,6 +211,50 @@ curl "$WEBHOOKS_URL/cal" \
   -d "@./assets/webhook-events/cal/meeting-ended.json" | jq
 ```
 
+### Cloudinary webhooks
+
+See the [documentation on Cloudinary](https://cloudinary.com/documentation/notifications).
+
+Missing headers, invalid data:
+
+```sh
+curl "http://localhost:8788/cloudinary" \
+  -X POST \
+  -H "Content-Type: application/json" \
+  -d '{"foo": 123, "bar": 456}' | jq
+```
+
+Required headers, invalid data:
+
+```sh
+curl "http://localhost:8788/cloudinary" \
+  -X POST \
+  -H "Content-Type: application/json" \
+  -H "X-Cld-Signature: signature-sent-by-cloudinary" \
+  -H "X-Cld-Timestamp: timestamp-sent-by-cloudinary" \
+  -d '{"foo": 123, "bar": 456}' | jq
+```
+
+Required headers, valid data:
+
+```sh
+curl "http://localhost:8788/cloudinary" \
+  -X POST \
+  -H "Content-Type: application/json" \
+  -H "X-Cld-Signature: signature-sent-by-cloudinary" \
+  -H "X-Cld-Timestamp: timestamp-sent-by-cloudinary" \
+  -d "@./assets/webhook-events/cloudinary/image-uploaded.json" | jq
+```
+
+```sh
+curl "$WEBHOOKS_URL/cloudinary" \
+  -X POST \
+  -H "Content-Type: application/json" \
+  -H "X-Cld-Signature: signature-sent-by-cloudinary" \
+  -H "X-Cld-Timestamp: timestamp-sent-by-cloudinary" \
+  -d "@./assets/webhook-events/cloudinary/image-uploaded.json" | jq
+```
+
 ### Cloud Monitoring webhooks
 
 See the [documentation on Cloud Monitoring](https://cloud.google.com/monitoring/support/notification-options#webhooks).

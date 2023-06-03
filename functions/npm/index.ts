@@ -10,7 +10,7 @@ export const onRequestGet = async (ctx: AppEventContext) => {
   const instructions = `
   <p>You can use this command to list all of your npm hooks:</p>
   <pre><code>npm hook ls</code></pre>
-  <p>See the <a href="https://docs.npmjs.com/cli/v9/commands/npm-hook" rel="noopener noreferrer" target="_blank">documentation on npm.js</a><p>
+  <p>See the <a href="https://docs.npmjs.com/cli/v9/commands/npm-hook" rel="noopener noreferrer" target="_blank">documentation on npm.js</a></p>
 `
 
   const html = `

@@ -21,11 +21,11 @@ export const onRequestGet: PagesFunction<AppEnvironment, any, Data> = async (
     .join('')}</ol>`
 
   const instructions = `
-  <p>WebPageTest pingbacks look like this:<p>
+  <p>WebPageTest pingbacks look like this:</p>
   <pre><code>https://www.webpagetest.org/result/WEBPAGETEST-TEST-ID</code></pre>
-  <p>You can use send WebPageTest pingbacks to this URL.<p>
-  <p>See the <a href="https://product.webpagetest.org/api" rel="noopener noreferrer" target="_blank">WebPageTest API</a><p>
-  <p>IP addresses of WebPageTest testers: ${testers}<p>`
+  <p>You can use send WebPageTest pingbacks to this URL.</p>
+  <p>See the <a href="https://product.webpagetest.org/api" rel="noopener noreferrer" target="_blank">WebPageTest API</a></p>
+  <p>IP addresses of WebPageTest testers: ${testers}</p>`
 
   if (!test_id) {
     const html = `

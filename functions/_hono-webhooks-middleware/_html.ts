@@ -45,7 +45,7 @@ export const body = ({
   if (warnings.length > 0) {
     arr.push(...warnings.map((s) => `<p>${Emoji.Warning} ${s}</p>`))
   }
-  arr.push(`<p>Back to <a href="/">home</a>.<p>`)
+  arr.push(`<p>Back to <a href="/">home</a>.</p>`)
 
   return `<body>${arr.join('')}</body>`
 }

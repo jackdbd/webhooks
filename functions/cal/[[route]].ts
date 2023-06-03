@@ -39,7 +39,7 @@ interface Environment extends Env {
   Variables: Variables
 }
 
-export const logAuditTrail = async (ctx: Context) => {
+const logAuditTrail = async (ctx: Context) => {
   const audit_trail = ctx.get(VariablesEnum.WebhookDebugKey) as AuditTrail
 
   console.log(audit_trail.summary)
@@ -81,7 +81,7 @@ app.get('/', async (ctx) => {
 
   const instructions = `
     <p>Receive meeting data in real-time when something happens in Cal.com</p>
-    <p>See the <a href="https://cal.com/docs/core-features/webhooks" rel="noopener noreferrer" target="_blank">documentation on cal.com</a><p>`
+    <p>See the <a href="https://cal.com/docs/core-features/webhooks" rel="noopener noreferrer" target="_blank">documentation on cal.com</a></p>`
 
   const html = `
   <!DOCTYPE html>

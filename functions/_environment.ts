@@ -11,6 +11,7 @@ export enum EnvVarsEnum {
   ApiKeyForStripe = 'STRIPE_API_KEY',
   Password = 'PASSWORD',
   SecretForCalComWebhooks = 'CAL_WEBHOOK_SECRET',
+  SecretForCloudinaryWebhooks = 'CLOUDINARY_WEBHOOK_SECRET',
   SecretForNpmJsWebhooks = 'NPM_WEBHOOK_SECRET',
   SecretForStripeWebhooks = 'STRIPE_WEBHOOK_SECRET',
   TelegramCredentialsAsJsonString = 'TELEGRAM',
