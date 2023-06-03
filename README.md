@@ -138,7 +138,7 @@ npm run tunnel
 
 Now copy the public, **Forwarding URL** that ngrok gave you, and assign it to the `WEBHOOKS_URL` environment variable (for example, paste it in your `.envrc` file and reload it with `direnv allow`). Be sure not to include any trailing slashes.
 
-![http-tunnel-with-ngrok](./assets/images/http-tunnel-with-ngrok.png)
+![Setting up a HTTP tunnel with ngrok](./assets/images/http-tunnel-with-ngrok.png)
 
 > :information_source: **Note:**
 >
@@ -151,6 +151,31 @@ In the **third terminal**, make some POST requests simulating webhook events sen
 ### cal.com webhooks
 
 See the [documentation on cal.com](https://cal.com/docs/core-features/webhooks).
+
+![Cal.com webhooks configuration](./assets/images/cal-webhooks.png)
+
+```sh
+curl "http://localhost:8788/cal" \
+  -X POST \
+  -H "Content-Type: application/json" \
+  -d '{"foo": 123, "bar": 456}' | jq
+```
+
+```sh
+curl "http://localhost:8788/cal" \
+  -X POST \
+  -H "Content-Type: application/json" \
+  -H "X-Cal-Signature-256: hex-string-sent-by-cal.com" \
+  -d '{"foo": 123, "bar": 456}' | jq
+```
+
+```sh
+curl "http://localhost:8788/cal" \
+  -X POST \
+  -H "Content-Type: application/json" \
+  -H "X-Cal-Signature-256: hex-string-sent-by-cal.com" \
+  -d "@./assets/webhook-events/cal/booking-created.json" | jq
+```
 
 Create a new booking:
 

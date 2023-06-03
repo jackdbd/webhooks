@@ -23,7 +23,6 @@
   },
   "dependencies": {
     "@hono/zod-validator": "0.1.2",
-    "@jackdbd/cloudflare-pages-plugin-cal-com": "^0.1.0",
     "@jackdbd/cloudflare-pages-plugin-telegram": "^0.1.0",
     "@jackdbd/telegram-text-messages": "1.2.0",
     "hono": "3.2.1",

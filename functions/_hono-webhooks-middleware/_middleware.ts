@@ -1,22 +1,29 @@
-import type { MiddlewareHandler } from 'hono'
+import type { Env, MiddlewareHandler } from 'hono'
+// import { type EventContext } from 'hono/cloudflare-pages'
 import { ZodObject } from 'zod'
 import {
+  type AuditEntry,
   badRequest,
+  default_schema,
   defaultOrOptional,
+  type DefaultWebhook,
   makeVerifyWebhook,
   PREFIX,
   serviceUnavailable
 } from './_utils.js'
-import type { AuditEntry, DefaultWebhook, Environment } from './_utils.js'
 
-export interface Options<T extends DefaultWebhook = DefaultWebhook> {
-  env_var?: string
-  header?: string
+export interface Config<T extends DefaultWebhook = DefaultWebhook> {
+  env_var: string
+  header: string
   schema?: ZodObject<T>
+  verification_message_var: string
 }
 
-export const DEFAULT: Options = { env_var: 'WEBHOOK_SECRET' }
+export const DEFAULT: Partial<Config> = {
+  schema: default_schema
+}
 
+// TODO: make this a configurable sink
 const logAuditTrail = (audit_trail: AuditEntry[]) => {
   console.log(`${PREFIX} audit trail`)
   audit_trail.forEach((d) => {
@@ -24,20 +31,32 @@ const logAuditTrail = (audit_trail: AuditEntry[]) => {
   })
 }
 
-export const webhooksMiddleware = <E extends Environment = Environment>(
-  options: Options = {}
+export const webhooksMiddleware = <E extends Env = Env>(
+  config: Config
 ): MiddlewareHandler<E> => {
-  const header = defaultOrOptional(DEFAULT.header, options.header)
-  if (!header) {
+  if (!config) {
+    throw new Error(`${PREFIX} config not set`)
+  }
+
+  if (!config.header) {
     throw new Error(`${PREFIX} header not set`)
   }
+  const header = config.header
 
-  const env_var = defaultOrOptional(DEFAULT.env_var, options.env_var)
-  if (!env_var) {
+  if (!config.env_var) {
     throw new Error(`${PREFIX} env_var not set`)
   }
+  const env_var = config.env_var
 
-  const schema = defaultOrOptional(DEFAULT.schema, options.schema)
+  const schema = defaultOrOptional(DEFAULT.schema, config.schema)
+  if (!schema) {
+    throw new Error(`${PREFIX} schema not set`)
+  }
+
+  if (!config.verification_message_var) {
+    throw new Error(`${PREFIX} verification_message_var not set`)
+  }
+  const verification_message_var = config.verification_message_var
 
   return async (ctx, next) => {
     if (ctx.req.method !== 'POST') {
@@ -50,7 +69,7 @@ export const webhooksMiddleware = <E extends Environment = Environment>(
     if (!cf_ray) {
       audit_trail.push({
         cf_ray: 'not-set',
-        message: `got a request context that has no CF-Ray header`,
+        message: `request has no CF-Ray header`,
         timestamp: new Date().getTime()
       })
       logAuditTrail(audit_trail)
@@ -60,25 +79,39 @@ export const webhooksMiddleware = <E extends Environment = Environment>(
     if (!ctx.env) {
       audit_trail.push({
         cf_ray,
-        message: `got a request context that has no env`,
+        message: `request has no environment variables available in its context`,
         timestamp: new Date().getTime()
       })
       logAuditTrail(audit_trail)
       return serviceUnavailable(ctx)
     }
 
-    const secret = ctx.env[env_var] // as string | undefined
+    // const ec = ctx.env.eventContext as EventContext<E>
+    // const functionPath = ec.functionPath
+    // console.log(
+    //   `ctx.env.eventContext.functionPath`,
+    //   functionPath,
+    //   `ctx.req.path`,
+    //   ctx.req.path
+    // )
+
+    const secret = ctx.env[env_var] as string | undefined
     if (!secret) {
       audit_trail.push({
         cf_ray,
-        message: `environment variable ${env_var} not set`,
+        message: `environment variable ${env_var} not available in this request context`,
         timestamp: new Date().getTime()
       })
       logAuditTrail(audit_trail)
       return serviceUnavailable(ctx)
     }
 
-    const verifyWebhook = makeVerifyWebhook({ env_var, header, secret, schema })
+    const verifyWebhook = makeVerifyWebhook<E>({
+      header,
+      secret,
+      schema,
+      verification_message_var
+    })
 
     const { audit_trail: audits, error, is_server } = await verifyWebhook(ctx)
 

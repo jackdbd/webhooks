@@ -1,10 +1,58 @@
-import type { CalWebhookEvent } from '@jackdbd/cloudflare-pages-plugin-cal-com'
-import type { Client as TelegramClient } from '@jackdbd/cloudflare-pages-plugin-telegram'
-import type { Env } from '../_environment.js'
-import { head, body } from '../_html.js'
+import { Hono, type Env } from 'hono'
+import { handle, type EventContext } from 'hono/cloudflare-pages'
+import { logger } from 'hono/logger'
+import { prettyJSON } from 'hono/pretty-json'
+import {
+  AppEnvironment,
+  EnvVarsEnum,
+  EventContextData
+} from '../_environment.js'
+import { notFound, onError } from '../_hono-handlers.js'
+import { webhooksMiddleware } from '../_hono-webhooks-middleware/_middleware.js'
+import { body, head } from '../_html.js'
 import { Emoji } from '../_utils.js'
+import { post_request_body, type CalWebhookEvent } from './_schemas.js'
 
-export const onRequestGet: PagesFunction<Env> = (_ctx) => {
+/**
+ * Bindings available in this Hono app.
+ */
+type Bindings = {
+  [key in EnvVarsEnum]: string | undefined
+} & { eventContext: EventContext<AppEnvironment, any, EventContextData> }
+
+enum VariablesEnum {
+  VerificationMessageVar = 'cal.com-webhook-verification-message'
+}
+
+/**
+ * Variables available in this Hono app.
+ */
+type Variables = {
+  [key in VariablesEnum]: string
+}
+
+interface Environment extends Env {
+  Bindings: Bindings
+  Variables: Variables
+}
+
+const app = new Hono<Environment>().basePath('/cal')
+app.use('*', logger())
+app.use('*', prettyJSON())
+app.use(
+  '*',
+  webhooksMiddleware({
+    env_var: EnvVarsEnum.SecretForCalComWebhooks,
+    header: 'X-Cal-Signature-256',
+    schema: post_request_body,
+    verification_message_var: VariablesEnum.VerificationMessageVar
+  })
+)
+
+app.notFound(notFound)
+app.onError(onError)
+
+app.get('/', async (ctx) => {
   const title = `Cal.com webhooks`
 
   const instructions = `
@@ -18,22 +66,14 @@ export const onRequestGet: PagesFunction<Env> = (_ctx) => {
     ${body({ title, instructions })}
   </html>`
 
-  return new Response(html, {
-    headers: {
-      'content-type': 'text/html;charset=UTF-8'
-    }
-  })
-}
+  return ctx.html(html)
+})
 
-type Data = Record<'calComValidatedWebhookEvent', CalWebhookEvent> &
-  Record<'telegram', TelegramClient>
+app.post('/', async (ctx) => {
+  const host = ctx.req.headers.get('host')
 
-export const onRequestPost: PagesFunction<Env, any, Data> = async (ctx) => {
-  const webhook_event = ctx.data.calComValidatedWebhookEvent
-  const verified_info = `<i>the event was verified by the cal.com webhooks middleware</i>`
-  const telegram = ctx.data.telegram
-
-  const host = ctx.request.headers.get('host')
+  const webhook_event = ctx.req.valid('json') as CalWebhookEvent
+  const verification_message = ctx.get(VariablesEnum.VerificationMessageVar)
 
   let text = ``
   switch (webhook_event.triggerEvent) {
@@ -134,8 +174,10 @@ export const onRequestPost: PagesFunction<Env, any, Data> = async (ctx) => {
 
   text = text.concat('\n\n')
   text = text.concat(
-    `${Emoji.Hook} <i>event handled by ${host}</i> - ${verified_info}`
+    `${Emoji.Hook} <i>${verification_message}</i> - <i>webhook event processed by ${host}</i>`
   )
+
+  const { telegram } = ctx.env.eventContext.data
 
   const { failures, successes, warnings } = await telegram.sendMessage(text)
 
@@ -154,9 +196,7 @@ export const onRequestPost: PagesFunction<Env, any, Data> = async (ctx) => {
     }
   }
 
-  return new Response(JSON.stringify(response_payload, null, 2), {
-    headers: {
-      'content-type': 'application/json;charset=UTF-8'
-    }
-  })
-}
+  return ctx.json(response_payload)
+})
+
+export const onRequest = handle(app)

@@ -1,11 +1,15 @@
 import { operationListText } from '@jackdbd/telegram-text-messages/operation-list'
 import type { Client as TelegramClient } from '@jackdbd/cloudflare-pages-plugin-telegram'
-import type { Env } from '../_environment.js'
+import type { AppEnvironment } from '../_environment.js'
 import { head, body } from '../_html.js'
 import { Emoji } from '../_utils.js'
 import { testerIps } from './_utils.js'
 
-export const onRequestGet: PagesFunction<Env> = async (ctx) => {
+type Data = Record<'telegram', TelegramClient>
+
+export const onRequestGet: PagesFunction<AppEnvironment, any, Data> = async (
+  ctx
+) => {
   const title = `WebPageTest pingback`
 
   const { searchParams } = new URL(ctx.request.url)
@@ -39,7 +43,7 @@ export const onRequestGet: PagesFunction<Env> = async (ctx) => {
 
   const test_result_url = `https://www.webpagetest.org/result/${test_id}/`
 
-  const telegram = ctx.data.telegram as TelegramClient
+  const { telegram } = ctx.data
 
   const successes: string[] = []
   const failures: string[] = []

@@ -1,5 +1,5 @@
 import type { Client as TelegramClient } from '@jackdbd/cloudflare-pages-plugin-telegram'
-import type { AppEventContext, Env } from '../_environment.js'
+import type { AppEnvironment, AppEventContext } from '../_environment.js'
 import { head, body } from '../_html.js'
 import { Emoji } from '../_utils.js'
 import type { NpmWebhookEvent } from './_schemas.js'
@@ -39,7 +39,9 @@ type Data = Record<'npmValidatedWebhookEvent', NpmWebhookEvent> &
  * - https://github.com/npm/npm-hook-receiver/blob/master/index.js
  * - https://github.com/npm/npm-hook-slack/blob/master/index.js
  */
-export const onRequestPost: PagesFunction<Env, any, Data> = async (ctx) => {
+export const onRequestPost: PagesFunction<AppEnvironment, any, Data> = async (
+  ctx
+) => {
   const webhook_event = ctx.data.npmValidatedWebhookEvent
   const verified_info = `<i>the event was verified by the npmjs.com webhooks middleware</i>`
   const telegram = ctx.data.telegram
