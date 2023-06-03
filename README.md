@@ -66,10 +66,7 @@ POST to the test endpoint without required header and invalid data:
 curl "http://localhost:8788/stripe" \
   -X POST \
   -H "Content-Type: application/json" \
-  -d '{
-    "foo": "bar",
-    "baz": 123
-  }' | jq
+  -d '{"foo": "bar", "baz": 123}' | jq
 ```
 
 POST to the test endpoint with the required header but invalid data:
@@ -79,10 +76,7 @@ curl "http://localhost:8788/stripe" \
   -X POST \
   -H "Content-Type: application/json" \
   -H "stripe-signature: foobar" \
-  -d '{
-    "foo": "bar",
-    "baz": 123
-  }' | jq
+  -d '{"foo": "bar", "baz": 123}' | jq
 ```
 
 POST to the test endpoint with the required header and valid data:

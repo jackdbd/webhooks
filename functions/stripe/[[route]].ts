@@ -1,17 +1,44 @@
-import { Hono } from 'hono'
+import { Hono, type Env } from 'hono'
 import Stripe from 'stripe'
 import { handle } from 'hono/cloudflare-pages'
 import { logger } from 'hono/logger'
 import { prettyJSON } from 'hono/pretty-json'
-import type { AppEventContext } from '../_environment.js'
+import {
+  type AppEnvironment,
+  type AppEventContext,
+  EnvVarsEnum,
+  type EventContextData
+} from '../_environment.js'
 import { head, body, anchor } from '../_html.js'
 import { Emoji } from '../_utils.js'
 import { notFound, onError } from '../_hono-handlers.js'
 import { stripeWebhooks } from '../_hono-middlewares.js'
-import type { Environment } from '../_hono-middlewares.js'
-// import { webhooksMiddleware } from '../_hono-webhooks-middleware/_middleware.js'
 import { PREFIX } from './_utils.js'
-// import { post_request_body } from './_schemas.js'
+
+/**
+ * Bindings available in this Hono app.
+ */
+type Bindings = {
+  [key in EnvVarsEnum]: string | undefined
+} & { eventContext: EventContext<AppEnvironment, any, EventContextData> }
+
+enum VariablesEnum {
+  stripeWebhookEndpoint = 'stripeWebhookEndpoint',
+  stripeWebhookEventsEnabled = 'stripeWebhookEventsEnabled',
+  VerificationMessageVar = 'stripe-webhook-verification-message'
+}
+
+/**
+ * Variables available in this Hono app.
+ */
+type Variables = {
+  [key in VariablesEnum]: string | string[]
+}
+
+interface Environment extends Env {
+  Bindings: Bindings
+  Variables: Variables
+}
 
 interface TextDetailsConfig {
   event: Stripe.Event
@@ -47,9 +74,10 @@ app.use('*', stripeWebhooks())
 // app.use(
 //   '*',
 //   webhooksMiddleware({
+//     env_var: EnvVarsEnum.SecretForStripeWebhooks,
 //     header: 'stripe-signature',
-//     env_var: 'STRIPE_WEBHOOK_SECRET',
-//     schema: post_request_body
+//     schema: post_request_body,
+//     verification_message_var: VariablesEnum.VerificationMessageVar
 //   })
 // )
 
@@ -59,8 +87,8 @@ app.onError(onError)
 app.get('/', async (ctx) => {
   console.log({ message: `${PREFIX}: GET /stripe before endpoint and events` })
 
-  const endpoint = ctx.get('stripeWebhookEndpoint')
-  const events = ctx.get('stripeWebhookEventsEnabled')
+  const endpoint = ctx.get(VariablesEnum.stripeWebhookEndpoint) as string
+  const events = ctx.get(VariablesEnum.stripeWebhookEventsEnabled) as string[]
 
   console.log({
     message: `${PREFIX}: GET /stripe after endpoint and events`,
@@ -100,8 +128,10 @@ app.post('/', async (ctx) => {
   const telegram = (ctx.env.eventContext as AppEventContext).data.telegram
 
   const event = ctx.req.valid('json') as Stripe.Event
-  const webhook_verification_message = ctx.get('webhook-verification-message')
-  // const verification = ctx.get('stripeWebhookEventVerification')
+
+  const webhook_verification_message = ctx.get(
+    VariablesEnum.VerificationMessageVar
+  ) as string
 
   const host = ctx.req.headers.get('host')
 

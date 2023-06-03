@@ -1,12 +1,12 @@
-import { Context, Env, Input } from 'hono'
+import type { Context, Env, Input } from 'hono'
 import Stripe from 'stripe'
-import { Environment } from '../_hono-middlewares.js'
 
 export enum Emoji {
   Fire = '🔥'
 }
 
-export const PREFIX = `[${Emoji.Fire} hono stripe webhooks middleware]`
+export const NAME = 'hono middleware stripe webhooks'
+export const PREFIX = `[${Emoji.Fire} ${NAME}]`
 
 export interface Config {
   stripe: Stripe
@@ -59,8 +59,8 @@ export const makeEnabledWebhookEvents = (
   }
 }
 
-export type ValidateWebhookEvent<
-  E extends Env = Environment,
+type ValidateWebhookEvent<
+  E extends Env = Env,
   P extends string = any,
   I extends Input = {}
 > = (ctx: Context<E, P, I>) => Promise<
@@ -71,9 +71,7 @@ export type ValidateWebhookEvent<
   | { error: undefined; value: Stripe.Event }
 >
 
-export const makeValidateWebhookEvent = (
-  config: Config
-): ValidateWebhookEvent => {
+const makeValidateWebhookEvent = (config: Config): ValidateWebhookEvent => {
   const { endpoint, secret, stripe } = config
   console.log({
     message: `${PREFIX}: create validateWebhookEvent function`,
@@ -122,6 +120,8 @@ export const makeValidateWebhookEvent = (
     // Turns out I can simply call stripe.webhooks.constructEventAsync instead
     // of webhooks.constructEvent.
 
+    // https://github.com/stripe/stripe-node/blob/master/src/Webhooks.ts
+
     try {
       const event = await stripe.webhooks.constructEventAsync(
         raw_req_body,
@@ -143,7 +143,7 @@ export const makeValidateWebhookEvent = (
 }
 
 export type Client<
-  E extends Env = Environment,
+  E extends Env = Env,
   P extends string = any,
   I extends Input = {}
 > = {

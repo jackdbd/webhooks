@@ -2,8 +2,7 @@ import type { Env, MiddlewareHandler } from 'hono'
 import { SafeParseReturnType } from 'zod'
 import { fromZodError } from 'zod-validation-error'
 import Stripe from 'stripe'
-import { makeClient, PREFIX } from './stripe/_utils.js'
-import type { Client } from './stripe/_utils.js'
+import { makeClient, NAME, PREFIX, type Client } from './stripe/_utils.js'
 import { badRequest, serviceUnavailable } from './_hono-utils.js'
 import { post_request_body } from './stripe/_schemas.js'
 import type { StripeWebhookEvent } from './stripe/_schemas.js'
@@ -22,21 +21,6 @@ interface Verification {
   message: string
 }
 
-export interface Environment extends Env {
-  Bindings: {
-    eventContext: any
-    STRIPE_API_KEY?: string
-    STRIPE_WEBHOOK_SECRET?: string
-    STRIPE_WEBHOOK_SKIP_VERIFICATION?: string
-  }
-  Variables: {
-    stripeWebhookEndpoint: string
-    stripeWebhookEventsEnabled: string[]
-    stripeWebhookEventVerification: Verification
-    'webhook-verification-message': string
-  }
-}
-
 const DEFAULT = {
   stripe_config: {
     // https://stripe.com/docs/api/versioning
@@ -46,9 +30,9 @@ const DEFAULT = {
   } as Stripe.StripeConfig
 }
 
-export const stripeWebhooks = (
+export const stripeWebhooks = <E extends Env = Env>(
   options?: StripeMiddlewareConfig
-): MiddlewareHandler<Environment, any> => {
+): MiddlewareHandler<E, any> => {
   const stripe_config = options?.stripe_config || DEFAULT.stripe_config
   console.log({ message: `${PREFIX} Stripe config`, ...stripe_config })
 
@@ -59,8 +43,8 @@ export const stripeWebhooks = (
     let secret: string | undefined = undefined
 
     if (ctx.env) {
-      api_key = ctx.env.STRIPE_API_KEY
-      secret = ctx.env.STRIPE_WEBHOOK_SECRET
+      api_key = ctx.env.STRIPE_API_KEY as string | undefined
+      secret = ctx.env.STRIPE_WEBHOOK_SECRET as string | undefined
     }
 
     if (!api_key) {
@@ -116,22 +100,28 @@ export const stripeWebhooks = (
       return serviceUnavailable(ctx)
     }
 
-    ctx.set('stripeWebhookEndpoint', endpoint)
+    ctx.set('stripeWebhookEndpoint' as any, endpoint)
     console.log({
       message: `${PREFIX} stripeWebhookEndpoint set in request context`
     })
 
-    ctx.set('stripeWebhookEventsEnabled', events)
+    ctx.set('stripeWebhookEventsEnabled' as any, events)
     console.log({
       message: `${PREFIX} stripeWebhookEventsEnabled set in request context`
     })
 
     if (ctx.req.method === 'POST') {
       let verification: Verification
-      if (ctx.env.STRIPE_WEBHOOK_SKIP_VERIFICATION === 'true') {
-        verification = { verified: false, message: `signature NOT verified` }
+      if ((ctx.env as any).STRIPE_WEBHOOK_SKIP_VERIFICATION === 'true') {
+        verification = {
+          verified: false,
+          message: `signature NOT verified by ${NAME}`
+        }
       } else {
-        verification = { verified: true, message: `signature verified` }
+        verification = {
+          verified: true,
+          message: `signature verified by ${NAME}`
+        }
       }
 
       let event: Stripe.Event | undefined = undefined
@@ -168,11 +158,7 @@ export const stripeWebhooks = (
 
       if (!result.success) {
         const err = fromZodError(result.error)
-        console.log({
-          message: `${PREFIX}: ${err.message}`
-          // errors: JSON.stringify(result.error.errors, null, 2),
-          // issues: JSON.stringify(result.error.issues, null, 2)
-        })
+        console.log({ message: `${PREFIX}: ${err.message}` })
         return badRequest(ctx)
       } else {
         console.log({ message: `${PREFIX}: schema validated` })
@@ -184,17 +170,18 @@ export const stripeWebhooks = (
       }
 
       ctx.req.addValidatedData('json', result.data)
-      console.log({ message: `${PREFIX} added validated 'json' data` })
-
-      ctx.set('stripeWebhookEventVerification', verification)
       console.log({
-        message: `${PREFIX} stripeWebhookEventVerification set in request context`
+        message: `${PREFIX} added validated 'json' data in request context`
+      })
+
+      ctx.set(
+        'stripe-webhook-verification-message' as any,
+        verification.message
+      )
+      console.log({
+        message: `${PREFIX} set key 'stripe-webhook-verification-message' in request context`
       })
     }
-
-    // READ THIS!
-    // https://community.cloudflare.com/t/wrangler-with-stripe-error/447825/2
-    // https://jross.me/verifying-stripe-webhook-signatures-cloudflare-workers/
 
     await next()
   }
