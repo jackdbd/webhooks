@@ -1,5 +1,6 @@
 import { Hono } from 'hono'
 import type { Env } from 'hono'
+import { basicAuth } from 'hono/basic-auth'
 import { handle } from 'hono/cloudflare-pages'
 import { logger } from 'hono/logger'
 import { prettyJSON } from 'hono/pretty-json'
@@ -15,6 +16,8 @@ interface Environment extends Env {
   Bindings: {
     eventContext: any
     MONITORING_WEBHOOK_SECRET: string
+    PASSWORD: string
+    USERNAME: string
   }
   Variables: {
     'webhook-verification-message': string
@@ -30,6 +33,20 @@ app.onError(onError)
 
 app.post(
   '/',
+  async (ctx, next) => {
+    const auth = basicAuth({
+      username: ctx.env.USERNAME,
+      password: ctx.env.PASSWORD
+    })
+    try {
+      return await auth(ctx, next)
+    } catch (ex: any) {
+      // ex is a HTTPException
+      // https://github.com/honojs/hono/blob/aaa1c6d4b9747fd69b168b30e984b75e4da4b508/src/middleware/basic-auth/index.ts#L68
+      // https://github.com/honojs/hono/blob/main/src/http-exception.ts
+      return ex.res
+    }
+  },
   zValidator('json', post_request_body, (result, ctx) => {
     if (!result.success) {
       const err = fromZodError(result.error)

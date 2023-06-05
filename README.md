@@ -259,38 +259,46 @@ curl "$WEBHOOKS_URL/cloudinary" \
 
 See the [documentation on Cloud Monitoring](https://cloud.google.com/monitoring/support/notification-options#webhooks).
 
-```sh
-curl "http://localhost:8788/monitoring" \
-  -X POST \
-  -H "Content-Type: application/json" \
-  -d '{"foo": 123, "bar": 456}' | jq
-```
+Missing headers, invalid data:
+
+A [Cloud Monitoring webhook notification channel](https://cloud.google.com/monitoring/support/notification-options#webhooks) supports basic access authentication.
+
+Cloud Monitoring requires your server to return a 401 response with the proper [WWW-Authenticate header](https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/WWW-Authenticate). So we use `curl --include` or `curl --verbose` to verify that the server returns the `WWW-Authenticate` response header.
 
 ```sh
 curl "http://localhost:8788/monitoring" \
   -X POST \
   -H "Content-Type: application/json" \
-  -d '{"foo": 123, "bar": 456}' | jq
+  -d '{"foo": 123, "bar": 456}' --include
 ```
+
+Required headers, invalid data:
 
 ```sh
 curl "http://localhost:8788/monitoring" \
   -X POST \
   -H "Content-Type: application/json" \
+  -H "Authorization: Basic $BASE64_ENCODED_BASIC_AUTH" \
+  -d '{"foo": 123, "bar": 456}' | jq
+```
+
+Required headers, valid data:
+
+```sh
+curl "http://localhost:8788/monitoring" \
+  -X POST \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Basic $BASE64_ENCODED_BASIC_AUTH" \
   -d "@./assets/webhook-events/cloud-monitoring/incident-created.json" | jq
 ```
 
-```sh
-curl "$WEBHOOKS_URL/monitoring" \
-  -X POST \
-  -H "Content-Type: application/json" \
-  -d '{"foo": 123, "bar": 456}' | jq
-```
+Required headers, valid data:
 
 ```sh
 curl "$WEBHOOKS_URL/monitoring" \
   -X POST \
   -H "Content-Type: application/json" \
+  -H "Authorization: Basic $BASE64_ENCODED_BASIC_AUTH" \
   -d "@./assets/webhook-events/cloud-monitoring/incident-created.json" | jq
 ```
 
