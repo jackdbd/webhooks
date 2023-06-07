@@ -15,6 +15,8 @@ export const onRequestGet: PagesFunction<AppEnvironment, any, Data> = async (
   const { searchParams } = new URL(ctx.request.url)
   const test_id = searchParams.get('id')
 
+  const host = ctx.request.headers.get('host')
+
   const ips = await testerIps()
   const testers = `<ol>${ips
     .map((ip) => `<li><code>${ip}</code></li>`)
@@ -43,43 +45,39 @@ export const onRequestGet: PagesFunction<AppEnvironment, any, Data> = async (
 
   const test_result_url = `https://www.webpagetest.org/result/${test_id}/`
 
+  let text = `<b>${Emoji.Timer} WebPageTest pingback</b>`
+
+  text = text.concat('\n\n')
+  text = text.concat(`This pingback was sent by WebPageTest.`)
+  text = text.concat('\n')
+  text = text.concat(
+    `Test <a href="${test_result_url}">${test_id}</a> is ready.`
+  )
+
+  text = text.concat('\n\n')
+  text = text.concat(`${Emoji.Hook} <i>webhook event processed by ${host}</i>`)
+
   const { telegram } = ctx.data
+  const { failures, successes, warnings } = await telegram.sendMessage(text)
 
-  const successes: string[] = []
-  const failures: string[] = []
-  const warnings: string[] = []
+  let obj: Object = {}
+  if (failures.length === 0) {
+    obj = {
+      message: `webpagetest.org pingback processed successfully`,
+      successes,
+      warnings
+    }
+  } else {
+    obj = {
+      message: `failed to process webpagetest.org pingback`,
+      failures,
+      warnings
+    }
+  }
 
-  const text = operationListText({
-    app_name: `${Emoji.Hook} ${Emoji.Inspect} webhooks`,
-    app_version: '0.0.1',
-    description: `This pingback was sent from WebPageTest. The web performance test <a href="${test_result_url}" target="_blank">${test_id}</a> is now ready.`,
-    operations: [
-      {
-        successes,
-        failures,
-        warnings,
-        title: `WebPageTest pingback`
-      }
-    ]
-  })
-
-  const data = await telegram.sendMessage(text)
-
-  const html = `
-      <!DOCTYPE html>
-      <html lang="en">
-        ${head()}
-        ${body({
-          title,
-          successes: data.successes,
-          failures: data.failures,
-          warnings: data.warnings
-        })}
-      </html>`
-
-  return new Response(html, {
+  return new Response(JSON.stringify(obj), {
     headers: {
-      'content-type': 'text/html;charset=UTF-8'
+      'Content-Type': 'application/json;charset=UTF-8'
     }
   })
 }

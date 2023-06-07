@@ -326,7 +326,9 @@ curl "$WEBHOOKS_URL/npm" \
 See the [documentation on WebPageTest](https://docs.webpagetest.org/integrations/).
 
 ```sh
-curl "$WEBHOOKS_URL/webpagetest?id=some-webpagetest-test-id"
+curl "http://localhost:8788/webpagetest?id=some-webpagetest-test-id" \
+  -X GET \
+  -H "Content-Type: application/json"
 ```
 
 ## Troubleshooting webhooks
