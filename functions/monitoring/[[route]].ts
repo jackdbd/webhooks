@@ -50,7 +50,7 @@ app.post(
   zValidator('json', post_request_body, (result, ctx) => {
     if (!result.success) {
       const err = fromZodError(result.error)
-      const cf_ray = ctx.req.headers.get('CF-Ray')
+      const cf_ray = ctx.req.header('CF-Ray')
 
       console.log({
         cf_ray,
@@ -95,7 +95,7 @@ app.post(
       throw new Error(`ctx.env is not defined`)
     }
 
-    const host = ctx.req.headers.get('host')
+    const host = ctx.req.header('host')
 
     const event: MonitoringWebhookEvent = ctx.req.valid('json')
 

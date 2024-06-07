@@ -5,6 +5,11 @@ node_modules/
 .dev.vars
 .envrc
 
+# configuration file for npm
+.npmrc
+
+.wrangler/
+
 # secrets
 secrets/*
 !secrets/README.md

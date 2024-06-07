@@ -19,7 +19,7 @@ export const payload = z.object({
   customInputs: z.any(),
   description: z.string(),
   destinationCalendar: z.any(),
-  endTime: z.string().nonempty(),
+  endTime: z.string().min(1),
   eventDescription: z.string(),
   eventTitle: z.string(),
   eventTypeId: z.number().optional(),
@@ -29,16 +29,16 @@ export const payload = z.object({
   metadata: z.any(),
   organizer: z.any(),
   price: z.number().nullable(),
-  rescheduleUid: z.string().nonempty().optional(),
+  rescheduleUid: z.string().min(1).optional(),
   requiresConfirmation: z.any(),
   responses: z.any(),
   seatsPerTimeSlot: z.any(),
   seatsShowAttendees: z.boolean().nullable(),
-  startTime: z.string().nonempty(),
+  startTime: z.string().min(1),
   status: z.enum(['ACCEPTED', 'CANCELLED']),
   title: z.string(),
-  type: z.string().nonempty(),
-  uid: z.string().nonempty(),
+  type: z.string().min(1),
+  uid: z.string().min(1),
   userFieldsResponses: z.any()
 })
 
@@ -56,7 +56,7 @@ export const post_request_body = z.object({
     'RECORDING_DOWNLOAD_LINK_READY'
   ]),
   // https://zod.dev/?id=iso-datetimes
-  createdAt: z.string().datetime().nonempty(),
+  createdAt: z.string().datetime().min(1),
   payload
 })
 

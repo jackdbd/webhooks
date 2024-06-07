@@ -68,7 +68,7 @@ type ValidateWebhookEvent<
       error: Error
       value?: undefined
     }
-  | { error: undefined; value: Stripe.Event }
+  | { error?: undefined; value: Stripe.Event }
 >
 
 const makeValidateWebhookEvent = (config: Config): ValidateWebhookEvent => {
@@ -80,7 +80,7 @@ const makeValidateWebhookEvent = (config: Config): ValidateWebhookEvent => {
   })
 
   return async function validateWebhookEvent(ctx) {
-    const stripe_signature = ctx.req.headers.get('stripe-signature')
+    const stripe_signature = ctx.req.header('stripe-signature')
 
     if (!stripe_signature) {
       const message = `request lacks required header: stripe-signature`
@@ -88,7 +88,7 @@ const makeValidateWebhookEvent = (config: Config): ValidateWebhookEvent => {
       console.log({
         message: `${PREFIX}: ${message} `,
         required_header: 'stripe-signature',
-        headers: ctx.req.headers
+        ctx_req: ctx.req
       })
 
       // this is a client error, not an application error. We log it and return

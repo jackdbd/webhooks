@@ -46,7 +46,7 @@ export const webhooksMiddleware = <
       return await next()
     }
 
-    const host = ctx.req.headers.get('host')
+    const host = ctx.req.header('host')
     const received_at = host ? `${host}${ctx.req.path}` : ctx.req.path
 
     const audit_trail: AuditTrail = {
@@ -60,7 +60,7 @@ export const webhooksMiddleware = <
     // The audit_trail object is MUTATED IN PLACE.
     ctx.set(debug_key as any, audit_trail)
 
-    const cf_ray = ctx.req.headers.get('CF-Ray')
+    const cf_ray = ctx.req.header('CF-Ray')
     if (!cf_ray) {
       audit_trail.entries.push({
         cf_ray: 'not-set',

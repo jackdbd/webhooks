@@ -1,4 +1,4 @@
-import type { Env, MiddlewareHandler } from 'hono'
+import type { Context, Env, MiddlewareHandler } from 'hono'
 import { SafeParseReturnType } from 'zod'
 import { fromZodError } from 'zod-validation-error'
 import Stripe from 'stripe'
@@ -24,7 +24,7 @@ interface Verification {
 const DEFAULT = {
   stripe_config: {
     // https://stripe.com/docs/api/versioning
-    apiVersion: '2022-11-15', // as Stripe.LatestApiVersion
+    apiVersion: '2024-04-10' as Stripe.LatestApiVersion,
     maxNetworkRetries: 3,
     timeout: 10000 // ms
   } as Stripe.StripeConfig
@@ -48,19 +48,20 @@ export const stripeWebhooks = <E extends Env = Env>(
     }
 
     if (!api_key) {
+      const message = 'server misconfiguration: Stripe API key not set'
       console.log({
-        message: `${PREFIX} server misconfiguration: Stripe API key not set`
+        message: `${PREFIX} ${message}`
       })
-      return serviceUnavailable(ctx)
+      return serviceUnavailable(ctx as Context, message)
     }
     console.log({
       message: `${PREFIX} Stripe API key set using environment variable STRIPE_API_KEY`
     })
 
-    const host = ctx.req.headers.get('host')
-    const user_agent = ctx.req.headers.get('user-agent')
-    // const real_ip = ctx.req.headers.get('x-real-ip')
-    // const forwarded_for = ctx.req.headers.get('x-forwarded-for')
+    const host = ctx.req.header('host')
+    const user_agent = ctx.req.header('user-agent')
+    // const real_ip = ctx.req.header('x-real-ip')
+    // const forwarded_for = ctx.req.header('x-forwarded-for')
 
     console.log({
       message: `${PREFIX} debugging a few request headers`,
@@ -76,10 +77,12 @@ export const stripeWebhooks = <E extends Env = Env>(
     const endpoint = `https://${host}${functionPath}`
 
     if (!secret) {
+      const message =
+        'server misconfiguration: Stripe webhook endpoint secret not set'
       console.log({
-        message: `${PREFIX} server misconfiguration: Stripe webhook endpoint secret not set`
+        message: `${PREFIX} ${message}`
       })
-      return serviceUnavailable(ctx)
+      return serviceUnavailable(ctx as Context, message)
     }
 
     if (!client) {
@@ -97,7 +100,7 @@ export const stripeWebhooks = <E extends Env = Env>(
         message: `${PREFIX} ${error.message}`,
         warnings
       })
-      return serviceUnavailable(ctx)
+      return serviceUnavailable(ctx as Context, error.message)
     }
 
     ctx.set('stripeWebhookEndpoint' as any, endpoint)
@@ -127,12 +130,14 @@ export const stripeWebhooks = <E extends Env = Env>(
       let event: Stripe.Event | undefined = undefined
       if (verification.verified) {
         console.log({ message: `${PREFIX}: verify request signature` })
-        const { error, value } = await client.validateWebhookEvent(ctx)
+        const { error, value } = await client.validateWebhookEvent(
+          ctx as Context
+        )
         if (error) {
           console.log({
             message: `${PREFIX}: request signature verification failed: ${error.message}`
           })
-          return badRequest(ctx)
+          return badRequest(ctx as Context)
         } else {
           console.log({ message: `${PREFIX}: request signature verified` })
           event = value
@@ -159,14 +164,14 @@ export const stripeWebhooks = <E extends Env = Env>(
       if (!result.success) {
         const err = fromZodError(result.error)
         console.log({ message: `${PREFIX}: ${err.message}` })
-        return badRequest(ctx)
+        return badRequest(ctx as Context)
       } else {
         console.log({ message: `${PREFIX}: schema validated` })
       }
 
       if (!events.includes(result.data.type)) {
         const message = `Received a Stripe ${result.data.type} event. Since your Stripe account is not configured to send this type of events to this endpoint (${endpoint}), the event is ignored.`
-        return badRequest(ctx, `Bad Request: ${message}`)
+        return badRequest(ctx as Context, `Bad Request: ${message}`)
       }
 
       ctx.req.addValidatedData('json', result.data)

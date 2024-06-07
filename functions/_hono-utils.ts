@@ -5,7 +5,7 @@ export const badRequest = (
   ctx: Context<Env, any, {}>,
   message: string = 'Bad Request'
 ) => {
-  const content_type = ctx.req.headers.get('content-type')
+  const content_type = ctx.req.header('content-type')
 
   if (content_type === 'application/json') {
     return ctx.json({ error: true, message }, { status: 400 })
@@ -27,7 +27,7 @@ export const serviceUnavailable = (
   ctx: Context<Env, any, {}>,
   message: string = 'Service unavailable'
 ) => {
-  const content_type = ctx.req.headers.get('content-type')
+  const content_type = ctx.req.header('content-type')
 
   if (content_type === 'application/json') {
     return ctx.json({ error: true, message }, { status: 503 })

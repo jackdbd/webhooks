@@ -1,18 +1,41 @@
 # webhooks 🪝
 
-Application that I use to process webhook events fired by several services: [Cloud Monitoring](https://cloud.google.com/monitoring/support/notification-options#webhooks), [npm.js](https://docs.npmjs.com/cli/v7/commands/npm-hook), [Stripe](https://stripe.com/docs/webhooks), etc. All webhooks are hosted as a single application on Cloudflare Pages. Some routes are handled by the [Cloudflare Pages Functions routing](https://developers.cloudflare.com/pages/platform/functions/routing/). Some others are handled by [Hono](https://hono.dev/).
+My collection of webhook targets for several services: [Cal.com](https://cal.com/docs/core-features/webhooks), [Cloud Monitoring](https://cloud.google.com/monitoring/support/notification-options#webhooks), [npm.js](https://docs.npmjs.com/cli/v7/commands/npm-hook), [Stripe](https://stripe.com/docs/webhooks), etc.
 
-> :warning: **Warning:**
->
-> Don't use wrangler 3 until [this bug](https://github.com/cloudflare/workers-sdk/issues/3262) is fixed.
+All webhooks targets are hosted on the same Cloudflare Pages website. Some routes are handled by Cloudflare Pages [Functions routing](https://developers.cloudflare.com/pages/platform/functions/routing/). Some other routes are handled by [Hono](https://hono.dev/api/routing).
+
+| service | routing |
+| :--- | :--- |
+| `cal` | Hono |
+| `cloudinary` | Hono |
+| `monitoring` | Hono |
+| `npm` | Pages Functions |
+| `stripe` | Hono |
+| `webpagetest` | Pages Functions |
 
 ## Installation
+
+This project requires a recent version of Node.js, ngrok and wrangler.
+
+If you use the [nix package manager](https://nixos.org/), you don't have to worry about installing them, since they are specified in the `flake.nix` file and will be installed automatically when you enter the project root directory. Otherwise you'll have to install them manually.
+
+You then have to install the npm packages:
 
 ```sh
 npm install
 ```
 
+The project also requires a few environment variables and secrets to be set (see below).
+
 ## Development
+
+When developing this Cloudflare Pages Function project, you will need to create a [.dev.vars](https://developers.cloudflare.com/workers/configuration/secrets/#secrets-in-development) file in the repository root. This file should **not** be tracked in version control since it contains environment variables and secrets that will be used when running `wrangler pages dev`.
+
+You can generate the `.dev.vars` file using this script:
+
+```sh
+node scripts/make-dev-vars.mjs
+```
 
 When developing handlers for [Stripe webhooks](https://stripe.com/docs/webhooks), you will need 2 terminals open to develop this application. In all other cases you will need 3 terminals open. I use [Tmux](https://github.com/tmux/tmux/wiki) for this.
 
@@ -22,8 +45,6 @@ When developing an app for Cloudflare Workers or Cloudflare Pages with `wrangler
 
 ```sh
 node scripts/make-dev-vars.mjs
-# in alternative, run this npm script:
-npm run make-dev-vars
 ```
 
 ### Stripe webhooks
@@ -35,7 +56,7 @@ stripe webhook_endpoints list --api-key $STRIPE_API_KEY_TEST
 stripe webhook_endpoints list --api-key $STRIPE_API_KEY_LIVE
 ```
 
-In the **first terminal**, run this command, which watches all files using [wrangler](https://github.com/cloudflare/workers-sdk) and forwards all Stripe webhook events to `localhost:8788` using the [Stripe CLI](https://github.com/stripe/stripe-cli):
+In the **first terminal** run the following command, which watches all files using [wrangler](https://github.com/cloudflare/workers-sdk) and forwards all Stripe webhook events to `localhost:8788` using the [Stripe CLI](https://github.com/stripe/stripe-cli):
 
 ```sh
 npm run dev
@@ -46,10 +67,10 @@ The main web page will be available at: http://localhost:8788/
 In the **second terminal**, [trigger](https://stripe.com/docs/cli/trigger) some Stripe events:
 
 ```sh
-stripe trigger --api-key $STRIPE_API_KEY_TEST customer.created
-stripe trigger --api-key $STRIPE_API_KEY_TEST payment_intent.succeeded
-stripe trigger --api-key $STRIPE_API_KEY_TEST price.created
-stripe trigger --api-key $STRIPE_API_KEY_TEST product.created
+stripe trigger customer.created
+stripe trigger payment_intent.succeeded
+stripe trigger price.created
+stripe trigger product.created
 
 API_KEY=$(cat secrets/stripe-webhook-endpoint-live.json | jq '.api_key') && \
 SIGNING_SECRET=$(cat secrets/stripe-webhook-endpoint-live.json | jq '.signing_secret') &&
@@ -63,7 +84,7 @@ Or make some POST requests manually:
 POST to the test endpoint without required header and invalid data:
 
 ```sh
-curl "http://localhost:8788/stripe" \
+curl "$WEBHOOKS_TARGET/stripe" \
   -X POST \
   -H "Content-Type: application/json" \
   -d '{"foo": "bar", "baz": 123}' | jq
@@ -72,7 +93,7 @@ curl "http://localhost:8788/stripe" \
 POST to the test endpoint with the required header but invalid data:
 
 ```sh
-curl "http://localhost:8788/stripe" \
+curl "$WEBHOOKS_TARGET/stripe" \
   -X POST \
   -H "Content-Type: application/json" \
   -H "stripe-signature: foobar" \
@@ -82,7 +103,7 @@ curl "http://localhost:8788/stripe" \
 POST to the test endpoint with the required header and valid data:
 
 ```sh
-curl "http://localhost:8788/stripe" \
+curl "$WEBHOOKS_TARGET/stripe" \
   -X POST \
   -H "Content-Type: application/json" \
   -H "stripe-signature: foobar" \
@@ -107,36 +128,35 @@ curl $STRIPE_WEBHOOKS_ENDPOINT \
 Also, send a GET request to see list of all events that Stripe is allowed to send to this endpoint:
 
 ```sh
-curl "http://localhost:8788/stripe" \
+curl "$WEBHOOKS_TARGET/stripe" \
   -X GET \
   -H "Content-Type: application/json" | jq
 ```
 
 ### Instructions for all webhooks except the ones from Stripe
 
-In the **first terminal**, run this command:
+In the **first terminal**, run this command to [develop the Pages application locally](https://developers.cloudflare.com/pages/functions/local-development/#run-your-pages-project-locally):
 
 ```sh
-npm run dev
+npm run dev:pages
 ```
 
-The main web page will be available at: http://localhost:8788/
+The app will be available at: http://localhost:8788/
 
-In the **second terminal**, run this command, which create a HTTPS => HTTP tunnel with [ngrok](https://ngrok.com/) on port `8788`:
+In the **second terminal**, run this command to create a HTTPS => HTTP tunnel with [ngrok](https://ngrok.com/) on port `8788`:
 
 ```sh
-ngrok http 8788
-# in alternative, run this npm script:
 npm run tunnel
 ```
 
-Now copy the public, **Forwarding URL** that ngrok gave you, and assign it to the `WEBHOOKS_URL` environment variable (for example, paste it in your `.envrc` file and reload it with `direnv allow`). Be sure not to include any trailing slashes.
+Now copy the public, **Forwarding URL** that ngrok gave you, and assign it to the `WEBHOOKS_TARGET` environment variable (for example, paste it in your `.envrc` file and reload it with `direnv allow`). Be sure to **remove any trailing slashes**.
 
 ![Setting up a HTTP tunnel with ngrok](./assets/images/http-tunnel-with-ngrok.png)
 
 > :information_source: **Note:**
 >
 > Now you can also:
+>
 > - visit http://localhost:4040/status to know the public URL ngrok assigned you.
 > - visit http://localhost:4040/inspect/http to inspect/replay past requests that were tunneled by ngrok.
 
@@ -149,14 +169,14 @@ See the [documentation on cal.com](https://cal.com/docs/core-features/webhooks).
 ![Cal.com webhooks configuration](./assets/images/cal-webhooks.png)
 
 ```sh
-curl "http://localhost:8788/cal" \
+curl "$WEBHOOKS_TARGET/cal" \
   -X POST \
   -H "Content-Type: application/json" \
   -d '{"foo": 123, "bar": 456}' | jq
 ```
 
 ```sh
-curl "http://localhost:8788/cal" \
+curl "$WEBHOOKS_TARGET/cal" \
   -X POST \
   -H "Content-Type: application/json" \
   -H "X-Cal-Signature-256: hex-string-sent-by-cal.com" \
@@ -164,7 +184,7 @@ curl "http://localhost:8788/cal" \
 ```
 
 ```sh
-curl "http://localhost:8788/cal" \
+curl "$WEBHOOKS_TARGET/cal" \
   -X POST \
   -H "Content-Type: application/json" \
   -H "X-Cal-Signature-256: hex-string-sent-by-cal.com" \
@@ -174,7 +194,7 @@ curl "http://localhost:8788/cal" \
 Create a new booking:
 
 ```sh
-curl "$WEBHOOKS_URL/cal" \
+curl "$WEBHOOKS_TARGET/cal" \
   -X POST \
   -H "Content-Type: application/json" \
   -H "X-Cal-Signature-256: hex-string-sent-by-cal.com" \
@@ -184,7 +204,7 @@ curl "$WEBHOOKS_URL/cal" \
 Reschedule a booking:
 
 ```sh
-curl "$WEBHOOKS_URL/cal" \
+curl "$WEBHOOKS_TARGET/cal" \
   -X POST \
   -H "Content-Type: application/json" \
   -H "X-Cal-Signature-256: hex-string-sent-by-cal.com" \
@@ -194,7 +214,7 @@ curl "$WEBHOOKS_URL/cal" \
 Cancel a booking:
 
 ```sh
-curl "$WEBHOOKS_URL/cal" \
+curl "$WEBHOOKS_TARGET/cal" \
   -X POST \
   -H "Content-Type: application/json" \
   -H "X-Cal-Signature-256: hex-string-sent-by-cal.com" \
@@ -204,7 +224,7 @@ curl "$WEBHOOKS_URL/cal" \
 Event sent by cal.com when a meeting ends:
 
 ```sh
-curl "$WEBHOOKS_URL/cal" \
+curl "$WEBHOOKS_TARGET/cal" \
   -X POST \
   -H "Content-Type: application/json" \
   -H "X-Cal-Signature-256: hex-string-sent-by-cal.com" \
@@ -218,7 +238,7 @@ See the [documentation on Cloudinary](https://cloudinary.com/documentation/notif
 Missing headers, invalid data:
 
 ```sh
-curl "http://localhost:8788/cloudinary" \
+curl "$WEBHOOKS_TARGET/cloudinary" \
   -X POST \
   -H "Content-Type: application/json" \
   -d '{"foo": 123, "bar": 456}' | jq
@@ -227,7 +247,7 @@ curl "http://localhost:8788/cloudinary" \
 Required headers, invalid data:
 
 ```sh
-curl "http://localhost:8788/cloudinary" \
+curl "$WEBHOOKS_TARGET/cloudinary" \
   -X POST \
   -H "Content-Type: application/json" \
   -H "X-Cld-Signature: signature-sent-by-cloudinary" \
@@ -238,7 +258,7 @@ curl "http://localhost:8788/cloudinary" \
 Required headers, valid data:
 
 ```sh
-curl "http://localhost:8788/cloudinary" \
+curl "$WEBHOOKS_TARGET/cloudinary" \
   -X POST \
   -H "Content-Type: application/json" \
   -H "X-Cld-Signature: signature-sent-by-cloudinary" \
@@ -247,7 +267,7 @@ curl "http://localhost:8788/cloudinary" \
 ```
 
 ```sh
-curl "$WEBHOOKS_URL/cloudinary" \
+curl "$WEBHOOKS_TARGET/cloudinary" \
   -X POST \
   -H "Content-Type: application/json" \
   -H "X-Cld-Signature: signature-sent-by-cloudinary" \
@@ -266,7 +286,7 @@ A [Cloud Monitoring webhook notification channel](https://cloud.google.com/monit
 Cloud Monitoring requires your server to return a 401 response with the proper [WWW-Authenticate header](https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/WWW-Authenticate). So we use `curl --include` or `curl --verbose` to verify that the server returns the `WWW-Authenticate` response header.
 
 ```sh
-curl "http://localhost:8788/monitoring" \
+curl "$WEBHOOKS_TARGET/monitoring" \
   -X POST \
   -H "Content-Type: application/json" \
   -d '{"foo": 123, "bar": 456}' --include
@@ -275,7 +295,7 @@ curl "http://localhost:8788/monitoring" \
 Required headers, invalid data:
 
 ```sh
-curl "http://localhost:8788/monitoring" \
+curl "$WEBHOOKS_TARGET/monitoring" \
   -X POST \
   -H "Content-Type: application/json" \
   -H "Authorization: Basic $BASE64_ENCODED_BASIC_AUTH" \
@@ -285,7 +305,7 @@ curl "http://localhost:8788/monitoring" \
 Required headers, valid data:
 
 ```sh
-curl "http://localhost:8788/monitoring" \
+curl "$WEBHOOKS_TARGET/monitoring" \
   -X POST \
   -H "Content-Type: application/json" \
   -H "Authorization: Basic $BASE64_ENCODED_BASIC_AUTH" \
@@ -295,7 +315,7 @@ curl "http://localhost:8788/monitoring" \
 Required headers, valid data:
 
 ```sh
-curl "$WEBHOOKS_URL/monitoring" \
+curl "$WEBHOOKS_TARGET/monitoring" \
   -X POST \
   -H "Content-Type: application/json" \
   -H "Authorization: Basic $BASE64_ENCODED_BASIC_AUTH" \
@@ -306,18 +326,42 @@ curl "$WEBHOOKS_URL/monitoring" \
 
 See the [documentation on npm.js](https://docs.npmjs.com/cli/v9/commands/npm-hook).
 
+On NixOS, `~/.npmrc` is a symbolic link to a filepath in the Nix store, which is a read-only filesystem. To authenticate with the npm CLI we have to use a local `.npmrc`. Create an empty `.npmrc` in the project root, then obtain the authentication token from npm.js by running the following command:
+
 ```sh
-curl "$WEBHOOKS_URL/npm" \
+npm adduser --userconfig .npmrc
+```
+
+Now all npm commands that require authentication should work fine:
+
+```sh
+npm whoami
+npm hook ls
+```
+
+Add a few npm hooks.
+
+```sh
+# npm scope
+npm hook add '@thi.ng' "$WEBHOOKS_TARGET/npm" $NPM_WEBHOOK_SECRET --userconfig .npmrc
+# npm username
+npm hook add '~jackdbd' "$WEBHOOKS_TARGET/npm" $NPM_WEBHOOK_SECRET
+# npm package
+npm hook add @11ty/eleventy "$WEBHOOKS_TARGET/npm" $NPM_WEBHOOK_SECRET
+```
+
+```sh
+curl "$WEBHOOKS_TARGET/npm" \
   -X POST \
   -H "Content-Type: application/json" \
   -d '{"foo": 123, "bar": 456}' | jq
 ```
 
 ```sh
-curl "$WEBHOOKS_URL/npm" \
+curl "$WEBHOOKS_TARGET/npm" \
   -X POST \
   -H "Content-Type: application/json" \
-  -H "x-npm-signature: hex-string-sent-by-npm.js" \
+  -H "x-npm-signature: $NPM_WEBHOOK_SECRET" \
   -d "@./assets/webhook-events/npm/package-changed.json" | jq
 ```
 
@@ -326,7 +370,7 @@ curl "$WEBHOOKS_URL/npm" \
 See the [documentation on WebPageTest](https://docs.webpagetest.org/integrations/).
 
 ```sh
-curl "http://localhost:8788/webpagetest?id=some-webpagetest-test-id" \
+curl "$WEBHOOKS_TARGET/webpagetest?id=some-webpagetest-test-id" \
   -X GET \
   -H "Content-Type: application/json"
 ```
@@ -337,8 +381,6 @@ Access your Cloudflare Pages Functions logs by using the Cloudflare dashboard or
 
 ```sh
 npm run logs
-# which is equivalent to:
-npx wrangler pages deployment tail --project-name webhooks
 ```
 
 [See the docs](https://developers.cloudflare.com/pages/platform/functions/debugging-and-logging/) for details.
@@ -351,6 +393,4 @@ You can also deploy manually using this command:
 
 ```sh
 npm run deploy
-# which is equivalent to:
-wrangler pages publish ./pages
 ```

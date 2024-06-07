@@ -40,7 +40,7 @@ export const makeVerifyWebhook = <
   return async function verifyWebhook(ctx: Context<E, P, I>) {
     const audit_entries: AuditEntry[] = []
 
-    const cf_ray = ctx.req.headers.get('CF-Ray')
+    const cf_ray = ctx.req.header('CF-Ray')
     if (!cf_ray) {
       const message = 'request lacks required HTTP header CF-Ray'
 
@@ -74,7 +74,7 @@ export const makeVerifyWebhook = <
       }
     }
 
-    const hex_signature = ctx.req.headers.get(config.header)
+    const hex_signature = ctx.req.header(config.header)
     if (!hex_signature) {
       const message = `request lacks required HTTP header ${header}`
 
@@ -129,7 +129,7 @@ export const makeVerifyWebhook = <
       audit_entries.push({ cf_ray, message, timestamp: new Date().getTime() })
     }
 
-    const x_real_ip = ctx.req.headers.get('x-real-ip')
+    const x_real_ip = ctx.req.header('x-real-ip')
 
     let signature: ArrayBuffer
     if (x_real_ip === '127.0.0.1') {

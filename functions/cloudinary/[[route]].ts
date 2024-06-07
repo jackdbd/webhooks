@@ -95,9 +95,10 @@ app.get('/', async (ctx) => {
 })
 
 app.post('/', async (ctx) => {
-  const host = ctx.req.headers.get('host')
+  const host = ctx.req.header('host')
 
   const { error, value } = await validRequestFromCloudinary(ctx)
+
   if (error) {
     console.log('=== error.message ===', error.message)
     return ctx.json({ message: 'Bad Request' }, 400)
@@ -160,6 +161,24 @@ app.post('/', async (ctx) => {
 
   const { telegram } = ctx.env.eventContext.data
   const { failures, successes, warnings } = await telegram.sendMessage(text)
+  // const credentials = JSON.parse(ctx.env.eventContext.env.TELEGRAM)
+  // const { chat_id, token } = credentials
+
+  // const body = {
+  //   chat_id,
+  //   disable_notification: false,
+  //   disable_web_page_preview: false,
+  //   parse_mode: 'HTML',
+  //   text: 'Testing Cloudflare Pages webhooks'
+  // }
+  // console.log('=== body ===', body)
+  // await fetch(`https://api.telegram.org/bot${token}/sendMessage`, {
+  //   method: 'POST',
+  //   body: JSON.stringify(body),
+  //   headers: {
+  //     'Content-type': `application/json`
+  //   }
+  // })
 
   //   await logAuditTrail(ctx)
   //   await sendAuditTrailToTelegram(ctx)

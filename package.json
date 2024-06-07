@@ -4,38 +4,39 @@
   "description": "My personal collection of webhooks.",
   "main": "index.js",
   "keywords": [
+    "cal.com",
+    "cloudinary",
+    "hono",
+    "stripe",
     "webhooks"
   ],
   "license": "MIT",
   "author": "Giacomo Debidda <giacomo@giacomodebidda.com> (https://giacomodebidda.com/)",
   "scripts": {
     "build": "true",
-    "deploy": "wrangler pages publish ./pages",
-    "dev": "wrangler pages dev ./pages --local --live-reload --port 8788 --compatibility-date=2023-05-18",
-    "dev-and-forward": "run-p forward-stripe-webhook-events-test pages:dev",
-    "forward-stripe-webhook-events-test": "stripe listen --events customer.created,customer.deleted,payment_intent.succeeded,price.created,product.created --api-key=$STRIPE_API_KEY_TEST --forward-to localhost:8788/stripe --log-level info --device-name 'ThinkPad L380'",
-    "forward-stripe-webhook-events-live": "stripe listen --events customer.created,customer.deleted,payment_intent.succeeded,price.created,product.created --api-key=$STRIPE_API_KEY_RESTRICTED --forward-to https://webhooks.giacomodebidda.com/stripe --log-level info --device-name 'ThinkPad L380'",
+    "deploy": "wrangler pages deploy ./pages --project-name webhooks",
+    "dev": "run-p forward-stripe-webhook-events-test dev:pages",
+    "dev:pages": "wrangler pages dev ./pages --compatibility-date=2023-05-18 --live-reload --port $PORT",
+    "forward-stripe-webhook-events-test": "stripe listen --events customer.created,customer.deleted,payment_intent.succeeded,price.created,product.created --api-key=$STRIPE_API_KEY_TEST --forward-to localhost:$PORT/stripe --log-level info --device-name 'Laptop'",
+    "forward-stripe-webhook-events-live": "stripe listen --events customer.created,customer.deleted,payment_intent.succeeded,price.created,product.created --api-key=$STRIPE_API_KEY_RESTRICTED --forward-to https://webhooks.giacomodebidda.com/stripe --log-level info --device-name 'Laptop'",
     "logs": "wrangler pages deployment tail --project-name webhooks",
     "nuke": "rm -rf node_modules package-lock.json",
-    "make-dev-vars": "node scripts/make-dev-vars.mjs",
-    "pages:dev": "wrangler pages dev ./pages --local --live-reload --port 8788 --compatibility-date=2023-05-18",
-    "tunnel": "ngrok http 8788"
+    "tunnel": "ngrok http $PORT"
   },
   "dependencies": {
-    "@hono/zod-validator": "0.1.2",
-    "@jackdbd/cloudflare-pages-plugin-telegram": "^0.1.0",
-    "@jackdbd/telegram-text-messages": "1.2.0",
-    "hono": "3.2.1",
-    "stripe": "12.6.0",
-    "zod": "3.21.4",
-    "zod-validation-error": "^1.3.0"
+    "@hono/zod-validator": "^0.2.2",
+    "@jackdbd/cloudflare-pages-plugin-telegram": "^0.1.1",
+    "@jackdbd/telegram-text-messages": "^1.2.0",
+    "hono": "^4.4.4",
+    "stripe": "^15.10.0",
+    "zod": "^3.23.8",
+    "zod-validation-error": "^3.3.0"
   },
   "devDependencies": {
-    "@cloudflare/workers-types": "4.20230518.0",
-    "@types/react": "^18.2.6",
-    "cloudinary": "^1.37.0",
+    "@cloudflare/workers-types": "4.20240605.0",
+    "@types/react": "^18.3.3",
+    "cloudinary": "^2.2.0",
     "npm-run-all": "4.1.5",
-    "prettier": "^2.8.8",
-    "wrangler": "2.20.0"
+    "prettier": "^3.3.1"
   }
 }

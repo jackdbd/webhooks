@@ -8,6 +8,7 @@ export const onRequestGet = async (ctx: AppEventContext) => {
   const title = `How to list your npm hooks`
 
   const instructions = `
+  <p>Be notified about changes on npm.js regarding packages, owners, and scopes.</p>
   <p>You can use this command to list all of your npm hooks:</p>
   <pre><code>npm hook ls</code></pre>
   <p>See the <a href="https://docs.npmjs.com/cli/v9/commands/npm-hook" rel="noopener noreferrer" target="_blank">documentation on npm.js</a></p>

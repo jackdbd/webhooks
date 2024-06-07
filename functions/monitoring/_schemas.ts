@@ -6,12 +6,12 @@ export const post_request_body = z.object({
    * about these ones for now.
    */
   incident: z.object({
-    condition_name: z.string().nonempty(),
-    policy_name: z.string().nonempty(),
-    summary: z.string().nonempty(),
-    url: z.string().nonempty()
+    condition_name: z.string().min(1),
+    policy_name: z.string().min(1),
+    summary: z.string().min(1),
+    url: z.string().min(1)
   }),
-  version: z.string().nonempty()
+  version: z.string().min(1)
 })
 
 export type MonitoringWebhookEvent = z.infer<typeof post_request_body>

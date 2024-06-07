@@ -35,7 +35,7 @@ export const config = z
 
     debug_key: z
       .string()
-      .nonempty()
+      .min(1)
       .default(request_context_key)
       .describe(
         'key that this middleware will set in the request context. Useful for troubleshooting your webhooks and understand how this middleware works. You can retrieve the value stored using ctx.get()'
@@ -43,7 +43,7 @@ export const config = z
 
     header: z
       .string()
-      .nonempty()
+      .min(1)
       .describe('HTTP request header containing the signature to verify'),
 
     schema: z

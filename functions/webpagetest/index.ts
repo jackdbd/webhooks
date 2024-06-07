@@ -5,6 +5,8 @@ import { head, body } from '../_html.js'
 import { Emoji } from '../_utils.js'
 import { testerIps } from './_utils.js'
 
+// The telegramPlugin registered in _middleware.ts adds a `telegram` property to
+// the `ctx.data` object.
 type Data = Record<'telegram', TelegramClient>
 
 export const onRequestGet: PagesFunction<AppEnvironment, any, Data> = async (
@@ -17,17 +19,18 @@ export const onRequestGet: PagesFunction<AppEnvironment, any, Data> = async (
 
   const host = ctx.request.headers.get('host')
 
-  const ips = await testerIps()
-  const testers = `<ol>${ips
-    .map((ip) => `<li><code>${ip}</code></li>`)
-    .join('')}</ol>`
+  // const ips = await testerIps()
+  // const testers = `<ol>${ips
+  //   .map((ip) => `<li><code>${ip}</code></li>`)
+  //   .join('')}</ol>`
 
-  const instructions = `
-  <p>WebPageTest pingbacks look like this:</p>
-  <pre><code>https://www.webpagetest.org/result/WEBPAGETEST-TEST-ID</code></pre>
-  <p>You can use send WebPageTest pingbacks to this URL.</p>
-  <p>See the <a href="https://product.webpagetest.org/api" rel="noopener noreferrer" target="_blank">WebPageTest API</a></p>
-  <p>IP addresses of WebPageTest testers: ${testers}</p>`
+  const instructions = [
+    `<p>WebPageTest pingbacks look like this:</p>`,
+    `<pre><code>https://www.webpagetest.org/result/WEBPAGETEST-TEST-ID</code></pre>`,
+    `<p>You can use send WebPageTest pingbacks to this URL.</p>`,
+    `<p>See the <a href="https://product.webpagetest.org/api" rel="noopener noreferrer" target="_blank">WebPageTest API</a></p>`
+    // `<p>IP addresses of WebPageTest testers: ${testers}</p>`
+  ].join('')
 
   if (!test_id) {
     const html = `

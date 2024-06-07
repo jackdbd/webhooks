@@ -7,11 +7,11 @@ import { z } from 'zod'
  */
 export const post_request_body = z.object({
   event: z.enum(['package:change']),
-  name: z.string().nonempty(),
+  name: z.string().min(1),
   type: z.enum(['package']),
-  version: z.string().nonempty(),
+  version: z.string().min(1),
   hookOwner: z.object({
-    username: z.string().nonempty()
+    username: z.string().min(1)
   }),
   payload: z.object({
     author: z.any(),

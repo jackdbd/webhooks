@@ -100,8 +100,7 @@ export default <E extends PluginEnv = PluginEnv>(pluginArgs?: PluginArgs) => {
       audit_trail.push(`created HMAC key using secret: ${secret}`)
     }
 
-    // npmjs.com uses a hex string as the signature. See here:
-    // TODO: verify this an add link
+    // npmjs.com uses a hex string as the signature.
     const signature_as_hex = ctx.request.headers.get(REQUEST_HEADER_KEY)
     if (!signature_as_hex) {
       return badRequest('missing webhook signature')
@@ -130,6 +129,10 @@ export default <E extends PluginEnv = PluginEnv>(pluginArgs?: PluginArgs) => {
     )
 
     if (!verified) {
+      audit_trail.push(
+        `failed HMAC signature verification of request payload and request header ${REQUEST_HEADER_KEY}`
+      )
+      console.log({ message: `${PREFIX} request audit trail`, audit_trail })
       return badRequest('invalid webhook event (signature mismatch)')
     }
     audit_trail.push(`verified ${REQUEST_HEADER_KEY} using HMAC key`)

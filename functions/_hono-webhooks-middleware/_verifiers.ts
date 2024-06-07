@@ -9,12 +9,12 @@ import { generateHash } from './_crypto.js'
  * @see https://github.com/cloudinary/cloudinary_npm/blob/ab69f5c3c63d0ef002ba131ea4bb52ec8cbd11ca/lib/utils/index.js#L1027
  */
 export const validRequestFromCloudinary = async (ctx: Context) => {
-  const x_cld_signature = ctx.req.headers.get('X-Cld-Signature')
+  const x_cld_signature = ctx.req.header('X-Cld-Signature')
   if (!x_cld_signature) {
     return { error: new Error('X-Cld-Signature header not set') }
   }
 
-  const x_cld_timestamp = ctx.req.headers.get('X-Cld-Timestamp')
+  const x_cld_timestamp = ctx.req.header('X-Cld-Timestamp')
   if (!x_cld_timestamp) {
     return { error: new Error('X-Cld-Timestamp header not set') }
   }

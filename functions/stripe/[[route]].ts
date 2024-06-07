@@ -96,7 +96,7 @@ app.get('/', async (ctx) => {
     events
   })
 
-  const content_type = ctx.req.headers.get('content-type')
+  const content_type = ctx.req.header('content-type')
   if (content_type === 'application/json') {
     return ctx.json({
       message: `This Stripe account is allowed to send ${events.length} webhook events to the endpoint ${endpoint}`,
@@ -127,13 +127,13 @@ app.get('/', async (ctx) => {
 app.post('/', async (ctx) => {
   const telegram = (ctx.env.eventContext as AppEventContext).data.telegram
 
-  const event = ctx.req.valid('json') as Stripe.Event
+  const event = (ctx.req as any).valid('json') as Stripe.Event
 
   const webhook_verification_message = ctx.get(
     VariablesEnum.VerificationMessageVar
   ) as string
 
-  const host = ctx.req.headers.get('host')
+  const host = ctx.req.header('host')
 
   let text = ''
   switch (event.type) {

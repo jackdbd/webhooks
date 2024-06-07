@@ -12,7 +12,7 @@ export const resource = z.object({
 })
 
 export const notification_context = z.object({
-  triggered_at: dt_with_offset.nonempty(),
+  triggered_at: dt_with_offset.min(1),
 
   triggered_by: z.object({
     id: z.string(), // e.g. "86787995117726"
