@@ -1,0 +1,15 @@
+[
+  {
+    "eventId": 1995857649,
+    "subscriptionId": 2647249,
+    "portalId": 143615370,
+    "appId": 3426515,
+    "occurredAt": 1717857901928,
+    "subscriptionType": "deal.creation",
+    "attemptNumber": 0,
+    "objectId": 14662255848,
+    "changeFlag": "CREATED",
+    "changeSource": "CRM_UI",
+    "sourceId": "userId:61749524"
+  }
+]

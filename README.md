@@ -322,6 +322,52 @@ curl "$WEBHOOKS_TARGET/monitoring" \
   -d "@./assets/webhook-events/cloud-monitoring/incident-created.json" | jq
 ```
 
+### HubSpot webhooks
+
+See the [documentation on developer.hubspot.com](https://developers.hubspot.com/docs/api/webhooks).
+
+```sh
+curl "$WEBHOOKS_TARGET/hubspot" \
+  -X POST \
+  -H "Content-Type: application/json" \
+  -d "@./assets/webhook-events/hubspot/contact-created.json" | jq
+```
+
+```sh
+curl "$WEBHOOKS_TARGET/hubspot" \
+  -X POST \
+  -H "Content-Type: application/json" \
+  -d "@./assets/webhook-events/hubspot/product-created.json" | jq
+```
+
+```sh
+curl "$WEBHOOKS_TARGET/hubspot" \
+  -X POST \
+  -H "Content-Type: application/json" \
+  -d "@./assets/webhook-events/hubspot/deal-created.json" | jq
+```
+
+```sh
+curl "$WEBHOOKS_TARGET/hubspot" \
+  -X POST \
+  -H "Content-Type: application/json" \
+  -d "@./assets/webhook-events/hubspot/deal-deleted.json" | jq
+```
+
+```sh
+curl "$WEBHOOKS_TARGET/hubspot" \
+  -X POST \
+  -H "Content-Type: application/json" \
+  -d "@./assets/webhook-events/hubspot/product-deleted.json" | jq
+```
+
+```sh
+curl "$WEBHOOKS_TARGET/hubspot" \
+  -X POST \
+  -H "Content-Type: application/json" \
+  -d "@./assets/webhook-events/hubspot/contact-deleted.json" | jq
+```
+
 ### npm.js webhooks
 
 See the [documentation on npm.js](https://docs.npmjs.com/cli/v9/commands/npm-hook).

@@ -94,14 +94,11 @@ app.get('/', async (ctx) => {
 })
 
 app.post('/', async (ctx) => {
-  console.log('🚀 ~ app.post ~ ctx:', ctx)
   const host = ctx.req.header('host')
 
   const webhook_event = (ctx.req as any).valid('json') as CalWebhookEvent
-  console.log('🚀 ~ app.post ~ webhook_event:', webhook_event)
-  // const webhook_event = ctx.req.valid('json') as CalWebhookEvent
+
   const audit_trail = ctx.get(VariablesEnum.WebhookDebugKey)
-  console.log('🚀 ~ app.post ~ audit_trail:', audit_trail)
 
   let text = ``
   switch (webhook_event.triggerEvent) {

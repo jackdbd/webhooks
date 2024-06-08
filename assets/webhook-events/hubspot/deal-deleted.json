@@ -1,0 +1,15 @@
+[
+  {
+    "eventId": 1264014419,
+    "subscriptionId": 2647250,
+    "portalId": 143615370,
+    "appId": 3426515,
+    "occurredAt": 1717858105136,
+    "subscriptionType": "deal.deletion",
+    "attemptNumber": 0,
+    "objectId": 14662255848,
+    "changeFlag": "DELETED",
+    "changeSource": "CRM_UI",
+    "sourceId": "userId:61749524"
+  }
+]

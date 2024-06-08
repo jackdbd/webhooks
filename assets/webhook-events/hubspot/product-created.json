@@ -1,0 +1,14 @@
+[
+  {
+    "eventId": 3322146415,
+    "subscriptionId": 2647251,
+    "portalId": 143615370,
+    "appId": 3426515,
+    "occurredAt": 1717857658217,
+    "subscriptionType": "product.creation",
+    "attemptNumber": 0,
+    "objectId": 3407690955,
+    "changeFlag": "CREATED",
+    "changeSource": "CRM_UI"
+  }
+]
